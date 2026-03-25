@@ -42,6 +42,22 @@ def add_todo_form():
         db.session.commit()
     return redirect(url_for('index'))
 
+# NEW: Toggle completion status
+@app.route('/complete/<int:todo_id>', methods=['POST'])
+def complete_todo(todo_id):
+    todo = Todo.query.get_or_404(todo_id)
+    todo.completed = not todo.completed  # toggle
+    db.session.commit()
+    return redirect(url_for('index'))
+
+# NEW: Delete a task
+@app.route('/delete/<int:todo_id>', methods=['POST'])
+def delete_todo(todo_id):
+    todo = Todo.query.get_or_404(todo_id)
+    db.session.delete(todo)
+    db.session.commit()
+    return redirect(url_for('index'))
+
 # --- JSON API routes (optional) ---
 @app.route('/todos', methods=['GET'])
 def get_todos():

@@ -8,7 +8,7 @@
 </head>
 <body>
     <div class="container">
-        <h1>My ToDo List</h1>
+        <h1>ToDo - Docker</h1>
 
         <form action="/add" method="POST" class="todo-form">
             <input type="text" name="title" placeholder="Enter a new task..." required>
@@ -18,10 +18,19 @@
         <ul class="todo-list">
             {% for todo in todos %}
                 <li class="todo-item">
+                    <div class="todo-actions">
+                        <form action="/complete/{{ todo.id }}" method="POST" class="inline-form">
+                            <button type="submit" class="btn-complete">
+                                {% if todo.completed %}Undo{% else %}Complete{% endif %}
+                            </button>
+                        </form>
+                        <form action="/delete/{{ todo.id }}" method="POST" class="inline-form">
+                            <button type="submit" class="btn-delete">Delete</button>
+                        </form>
+                    </div>
                     <span class="todo-title {% if todo.completed %}completed{% endif %}">
                         {{ todo.title }}
                     </span>
-                    <!-- You can add delete/complete buttons here later -->
                 </li>
             {% else %}
                 <li class="empty">No tasks yet. Add one above!</li>
