@@ -140,3 +140,22 @@ h1 {
     height: 1px;
     background: #ddd;
 }
+
+.title-container {
+    flex: 1;
+    margin-left: 0.5rem;
+}
+
+.todo-title {
+    display: block;
+    width: 100%;
+}
+
+.edit-input {
+    width: 100%;
+    padding: 0.25rem;
+    font-size: 1rem;
+    border: 1px solid #007bff;
+    border-radius: 4px;
+    outline: none;
+}

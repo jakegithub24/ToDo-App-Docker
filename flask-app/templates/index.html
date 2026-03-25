@@ -22,11 +22,14 @@
                 {% for todo in todos if not todo.completed %}
                     <li class="todo-item" data-id="{{ todo.id }}">
                         <form action="/complete/{{ todo.id }}" method="POST" class="checkbox-form">
-                            <input type="checkbox" class="task-checkbox" {% if todo.completed %}checked{% endif %} onchange="this.form.submit()">
+                            <input type="checkbox" class="task-checkbox" onchange="this.form.submit()">
                         </form>
-                        <span class="todo-title">{{ todo.title }}</span>
+                        <div class="title-container">
+                            <span class="todo-title">{{ todo.title }}</span>
+                            <input type="text" class="edit-input" style="display:none;" value="{{ todo.title }}" data-id="{{ todo.id }}">
+                        </div>
                         <div class="todo-actions">
-                            <button class="btn-edit" onclick="editTask({{ todo.id }}, {{ todo.title|tojson }})">Edit</button>
+                            <button class="btn-edit">Edit</button>
                             <form action="/delete/{{ todo.id }}" method="POST" class="inline-form">
                                 <button type="submit" class="btn-delete">Delete</button>
                             </form>
@@ -48,9 +51,12 @@
                             <form action="/complete/{{ todo.id }}" method="POST" class="checkbox-form">
                                 <input type="checkbox" class="task-checkbox" checked onchange="this.form.submit()">
                             </form>
-                            <span class="todo-title completed">{{ todo.title }}</span>
+                            <div class="title-container">
+                                <span class="todo-title completed">{{ todo.title }}</span>
+                                <input type="text" class="edit-input" style="display:none;" value="{{ todo.title }}" data-id="{{ todo.id }}">
+                            </div>
                             <div class="todo-actions">
-                                <button class="btn-edit" onclick="editTask({{ todo.id }}, {{ todo.title|tojson }})">Edit</button>
+                                <button class="btn-edit">Edit</button>
                                 <form action="/delete/{{ todo.id }}" method="POST" class="inline-form">
                                     <button type="submit" class="btn-delete">Delete</button>
                                 </form>
@@ -63,23 +69,68 @@
     </div>
 
     <script>
-        function editTask(taskId, currentTitle) {
-            const newTitle = prompt("Edit task:", currentTitle);
-            if (newTitle && newTitle.trim() !== "") {
+        // Inline edit logic
+        document.querySelectorAll('.btn-edit').forEach(button => {
+            button.addEventListener('click', function() {
+                const li = this.closest('.todo-item');
+                const titleSpan = li.querySelector('.todo-title');
+                const editInput = li.querySelector('.edit-input');
+                // Show input, hide title
+                titleSpan.style.display = 'none';
+                editInput.style.display = 'block';
+                editInput.focus();
+                // Select all text
+                editInput.select();
+            });
+        });
+
+        // When input loses focus or Enter is pressed, save changes
+        document.querySelectorAll('.edit-input').forEach(input => {
+            const saveChange = function() {
+                const li = input.closest('.todo-item');
+                const titleSpan = li.querySelector('.todo-title');
+                const newTitle = input.value.trim();
+                const taskId = input.dataset.id;
+
+                if (newTitle === "") {
+                    // If empty, revert to original
+                    input.value = titleSpan.innerText;
+                    titleSpan.style.display = 'block';
+                    input.style.display = 'none';
+                    return;
+                }
+
+                // Send update to server
                 fetch(`/edit/${taskId}`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/x-www-form-urlencoded',
                     },
                     body: `title=${encodeURIComponent(newTitle)}`
-                }).then(() => {
-                    location.reload();  // Reload the page to reflect changes
-                }).catch(err => {
+                })
+                .then(response => {
+                    if (!response.ok) throw new Error('Update failed');
+                    // Reload the page to reflect changes (simple)
+                    location.reload();
+                })
+                .catch(err => {
                     console.error('Error updating task:', err);
                     alert('Failed to update task.');
+                    // Revert to original
+                    input.value = titleSpan.innerText;
+                    titleSpan.style.display = 'block';
+                    input.style.display = 'none';
                 });
-            }
-        }
+            };
+
+            input.addEventListener('blur', saveChange);
+            input.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    saveChange();
+                }
+            });
+        });
     </script>
 </body>
 </html>
