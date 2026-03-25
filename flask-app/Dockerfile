@@ -5,7 +5,7 @@ WORKDIR /app
 COPY requirements.txt .
 RUN python -m venv myvenv && myvenv/bin/pip install --no-cache-dir -r requirements.txt
 
-COPY app.py .
+COPY . .
 
 EXPOSE 5000
 

@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ToDo App</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h1>My ToDo List</h1>
+
+        <form action="/add" method="POST" class="todo-form">
+            <input type="text" name="title" placeholder="Enter a new task..." required>
+            <button type="submit">Add</button>
+        </form>
+
+        <ul class="todo-list">
+            {% for todo in todos %}
+                <li class="todo-item">
+                    <span class="todo-title {% if todo.completed %}completed{% endif %}">
+                        {{ todo.title }}
+                    </span>
+                    <!-- You can add delete/complete buttons here later -->
+                </li>
+            {% else %}
+                <li class="empty">No tasks yet. Add one above!</li>
+            {% endfor %}
+        </ul>
+    </div>
+</body>
+</html>

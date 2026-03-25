@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, render_template, redirect, url_for
 from flask_sqlalchemy import SQLAlchemy
 import os
 
@@ -27,13 +27,29 @@ class Todo(db.Model):
 with app.app_context():
     db.create_all()
 
+# --- Frontend routes ---
+@app.route('/')
+def index():
+    todos = Todo.query.all()
+    return render_template('index.html', todos=todos)
+
+@app.route('/add', methods=['POST'])
+def add_todo_form():
+    title = request.form.get('title')
+    if title:
+        new_todo = Todo(title=title)
+        db.session.add(new_todo)
+        db.session.commit()
+    return redirect(url_for('index'))
+
+# --- JSON API routes (optional) ---
 @app.route('/todos', methods=['GET'])
 def get_todos():
     todos = Todo.query.all()
     return jsonify([t.to_dict() for t in todos])
 
 @app.route('/todos', methods=['POST'])
-def add_todo():
+def add_todo_json():
     data = request.get_json()
     new_todo = Todo(title=data['title'], completed=data.get('completed', False))
     db.session.add(new_todo)
