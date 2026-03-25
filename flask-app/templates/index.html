@@ -8,34 +8,78 @@
 </head>
 <body>
     <div class="container">
-        <h1>ToDo - Docker</h1>
+        <h1>My ToDo List</h1>
 
         <form action="/add" method="POST" class="todo-form">
             <input type="text" name="title" placeholder="Enter a new task..." required>
             <button type="submit">Add</button>
         </form>
 
-        <ul class="todo-list">
-            {% for todo in todos %}
-                <li class="todo-item">
-                    <div class="todo-actions">
-                        <form action="/complete/{{ todo.id }}" method="POST" class="inline-form">
-                            <button type="submit" class="btn-complete">
-                                {% if todo.completed %}Undo{% else %}Complete{% endif %}
-                            </button>
+        <!-- Incomplete tasks section -->
+        <div class="tasks-section">
+            <h2>Tasks to do</h2>
+            <ul class="todo-list">
+                {% for todo in todos if not todo.completed %}
+                    <li class="todo-item" data-id="{{ todo.id }}">
+                        <form action="/complete/{{ todo.id }}" method="POST" class="checkbox-form">
+                            <input type="checkbox" class="task-checkbox" {% if todo.completed %}checked{% endif %} onchange="this.form.submit()">
                         </form>
-                        <form action="/delete/{{ todo.id }}" method="POST" class="inline-form">
-                            <button type="submit" class="btn-delete">Delete</button>
-                        </form>
-                    </div>
-                    <span class="todo-title {% if todo.completed %}completed{% endif %}">
-                        {{ todo.title }}
-                    </span>
-                </li>
-            {% else %}
-                <li class="empty">No tasks yet. Add one above!</li>
-            {% endfor %}
-        </ul>
+                        <span class="todo-title">{{ todo.title }}</span>
+                        <div class="todo-actions">
+                            <button class="btn-edit" onclick="editTask({{ todo.id }}, {{ todo.title|tojson }})">Edit</button>
+                            <form action="/delete/{{ todo.id }}" method="POST" class="inline-form">
+                                <button type="submit" class="btn-delete">Delete</button>
+                            </form>
+                        </div>
+                    </li>
+                {% else %}
+                    <li class="empty">No pending tasks. Add one above!</li>
+                {% endfor %}
+            </ul>
+        </div>
+
+        {% if todos|selectattr('completed')|list %}
+            <hr class="section-divider">
+            <div class="tasks-section">
+                <h2>Completed tasks</h2>
+                <ul class="todo-list completed-list">
+                    {% for todo in todos if todo.completed %}
+                        <li class="todo-item" data-id="{{ todo.id }}">
+                            <form action="/complete/{{ todo.id }}" method="POST" class="checkbox-form">
+                                <input type="checkbox" class="task-checkbox" checked onchange="this.form.submit()">
+                            </form>
+                            <span class="todo-title completed">{{ todo.title }}</span>
+                            <div class="todo-actions">
+                                <button class="btn-edit" onclick="editTask({{ todo.id }}, {{ todo.title|tojson }})">Edit</button>
+                                <form action="/delete/{{ todo.id }}" method="POST" class="inline-form">
+                                    <button type="submit" class="btn-delete">Delete</button>
+                                </form>
+                            </div>
+                        </li>
+                    {% endfor %}
+                </ul>
+            </div>
+        {% endif %}
     </div>
+
+    <script>
+        function editTask(taskId, currentTitle) {
+            const newTitle = prompt("Edit task:", currentTitle);
+            if (newTitle && newTitle.trim() !== "") {
+                fetch(`/edit/${taskId}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: `title=${encodeURIComponent(newTitle)}`
+                }).then(() => {
+                    location.reload();  // Reload the page to reflect changes
+                }).catch(err => {
+                    console.error('Error updating task:', err);
+                    alert('Failed to update task.');
+                });
+            }
+        }
+    </script>
 </body>
 </html>

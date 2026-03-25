@@ -30,7 +30,8 @@ with app.app_context():
 # --- Frontend routes ---
 @app.route('/')
 def index():
-    todos = Todo.query.all()
+    # Order by id descending so newest tasks appear first
+    todos = Todo.query.order_by(Todo.id.desc()).all()
     return render_template('index.html', todos=todos)
 
 @app.route('/add', methods=['POST'])
@@ -42,7 +43,6 @@ def add_todo_form():
         db.session.commit()
     return redirect(url_for('index'))
 
-# NEW: Toggle completion status
 @app.route('/complete/<int:todo_id>', methods=['POST'])
 def complete_todo(todo_id):
     todo = Todo.query.get_or_404(todo_id)
@@ -50,7 +50,15 @@ def complete_todo(todo_id):
     db.session.commit()
     return redirect(url_for('index'))
 
-# NEW: Delete a task
+@app.route('/edit/<int:todo_id>', methods=['POST'])
+def edit_todo(todo_id):
+    todo = Todo.query.get_or_404(todo_id)
+    new_title = request.form.get('title')
+    if new_title:
+        todo.title = new_title
+        db.session.commit()
+    return redirect(url_for('index'))
+
 @app.route('/delete/<int:todo_id>', methods=['POST'])
 def delete_todo(todo_id):
     todo = Todo.query.get_or_404(todo_id)

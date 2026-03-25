@@ -46,6 +46,12 @@ h1 {
     background-color: #218838;
 }
 
+.tasks-section h2 {
+    font-size: 1.2rem;
+    color: #555;
+    margin: 1rem 0 0.5rem;
+}
+
 .todo-list {
     list-style: none;
     padding: 0;
@@ -54,12 +60,36 @@ h1 {
 .todo-item {
     display: flex;
     align-items: center;
-    justify-content: space-between;
     background: #f9f9f9;
     margin: 0.5rem 0;
     padding: 0.5rem;
     border-radius: 4px;
     border-left: 4px solid #28a745;
+}
+
+/* For completed tasks, use a different left border color */
+.completed-list .todo-item {
+    border-left-color: #6c757d;
+}
+
+.checkbox-form {
+    margin-right: 0.5rem;
+}
+
+.task-checkbox {
+    width: 1.2rem;
+    height: 1.2rem;
+    cursor: pointer;
+}
+
+.todo-title {
+    flex: 1;
+    font-size: 1rem;
+}
+
+.todo-title.completed {
+    text-decoration: line-through;
+    color: #888;
 }
 
 .todo-actions {
@@ -71,7 +101,7 @@ h1 {
     display: inline;
 }
 
-.btn-complete, .btn-delete {
+.btn-edit, .btn-delete {
     padding: 0.25rem 0.5rem;
     border: none;
     border-radius: 4px;
@@ -79,13 +109,13 @@ h1 {
     font-size: 0.8rem;
 }
 
-.btn-complete {
-    background-color: #007bff;
-    color: white;
+.btn-edit {
+    background-color: #ffc107;
+    color: #212529;
 }
 
-.btn-complete:hover {
-    background-color: #0056b3;
+.btn-edit:hover {
+    background-color: #e0a800;
 }
 
 .btn-delete {
@@ -97,19 +127,16 @@ h1 {
     background-color: #c82333;
 }
 
-.todo-title {
-    flex: 1;
-    margin-left: 1rem;
-    font-size: 1rem;
-}
-
-.todo-title.completed {
-    text-decoration: line-through;
-    color: #888;
-}
-
 .empty {
     text-align: center;
     color: #777;
     font-style: italic;
+    padding: 1rem;
+}
+
+.section-divider {
+    margin: 1.5rem 0;
+    border: none;
+    height: 1px;
+    background: #ddd;
 }
