@@ -1,0 +1,22 @@
+version: '3.8'
+
+services:
+  flask:
+    build: ./flask-app
+    ports:
+      - "5000:5000"
+    volumes:
+      - todo-data:/data   # shared volume
+    depends_on:
+      - sqlite-db
+    environment:
+      - FLASK_ENV=development
+
+  sqlite-db:
+    build: ./sqlite-container
+    volumes:
+      - todo-data:/data   # same volume
+    restart: unless-stopped
+
+volumes:
+  todo-data:
