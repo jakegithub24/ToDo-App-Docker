@@ -356,6 +356,11 @@ h1 {
     box-sizing: border-box;
 }
 
+.search-form button i,
+.search-form .clear-filter i {
+    margin-right: 4px;
+}
+
 /* Task sections */
 .tasks-section {
     margin-bottom: 1.5rem;
