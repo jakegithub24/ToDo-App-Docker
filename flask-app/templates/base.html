@@ -45,15 +45,27 @@
         // Sidebar toggle - hide whole content when collapsed
         const sidebar = document.querySelector('.categories-sidebar');
         const toggleBtn = document.getElementById('toggleSidebar');
-        if (toggleBtn) {
+        const isMobileLayout = () => window.matchMedia('(max-width: 900px)').matches;
+        function updateSidebarToggleIcon() {
+            if (!toggleBtn || !sidebar) return;
+            const collapsed = sidebar.classList.contains('collapsed');
+            if (isMobileLayout()) {
+                toggleBtn.innerHTML = collapsed
+                    ? '<i class="fas fa-chevron-down"></i>'
+                    : '<i class="fas fa-chevron-up"></i>';
+            } else {
+                toggleBtn.innerHTML = collapsed
+                    ? '<i class="fas fa-chevron-right"></i>'
+                    : '<i class="fas fa-chevron-left"></i>';
+            }
+        }
+        if (toggleBtn && sidebar) {
             toggleBtn.addEventListener('click', () => {
                 sidebar.classList.toggle('collapsed');
-                if (sidebar.classList.contains('collapsed')) {
-                    toggleBtn.innerHTML = '<i class="fas fa-chevron-right"></i>';
-                } else {
-                    toggleBtn.innerHTML = '<i class="fas fa-chevron-left"></i>';
-                }
+                updateSidebarToggleIcon();
             });
+            updateSidebarToggleIcon();
+            window.addEventListener('resize', updateSidebarToggleIcon, { passive: true });
         }
 
         // Category edit modal
