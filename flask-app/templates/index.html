@@ -17,10 +17,16 @@
 
         <!-- Incomplete tasks section -->
         <div class="tasks-section">
-            <h2>Tasks to do</h2>
-            <ul class="todo-list">
+            <div class="section-header">
+                <h2>Tasks to do</h2>
+                <a href="#" class="select-link" data-section="incomplete">Select</a>
+            </div>
+            <ul class="todo-list" id="incomplete-list">
                 {% for todo in todos if not todo.completed %}
                     <li class="todo-item" data-id="{{ todo.id }}">
+                        <div class="selection-checkbox" style="display:none;">
+                            <input type="checkbox" class="task-select" value="{{ todo.id }}">
+                        </div>
                         <form action="/complete/{{ todo.id }}" method="POST" class="checkbox-form">
                             <input type="checkbox" class="task-checkbox" onchange="this.form.submit()">
                         </form>
@@ -44,10 +50,16 @@
         {% if todos|selectattr('completed')|list %}
             <hr class="section-divider">
             <div class="tasks-section">
-                <h2>Completed tasks</h2>
-                <ul class="todo-list completed-list">
+                <div class="section-header">
+                    <h2>Completed tasks</h2>
+                    <a href="#" class="select-link" data-section="completed">Select</a>
+                </div>
+                <ul class="todo-list completed-list" id="completed-list">
                     {% for todo in todos if todo.completed %}
                         <li class="todo-item" data-id="{{ todo.id }}">
+                            <div class="selection-checkbox" style="display:none;">
+                                <input type="checkbox" class="task-select" value="{{ todo.id }}">
+                            </div>
                             <form action="/complete/{{ todo.id }}" method="POST" class="checkbox-form">
                                 <input type="checkbox" class="task-checkbox" checked onchange="this.form.submit()">
                             </form>
@@ -66,25 +78,196 @@
                 </ul>
             </div>
         {% endif %}
+
+        <!-- Hidden container for batch action buttons (will be placed dynamically) -->
+        <div id="batch-actions" style="display:none; text-align: center; margin-top: 20px;">
+            <button class="batch-btn complete-btn">Mark Complete</button>
+            <button class="batch-btn incomplete-btn">Mark Incomplete</button>
+            <button class="batch-btn delete-btn">Delete</button>
+            <a href="#" class="cancel-select">Cancel</a>
+        </div>
     </div>
 
     <script>
-        // Inline edit logic
+        // Global references
+        let activeSection = null; // 'incomplete' or 'completed'
+
+        // Toggle selection mode for a given section
+        function toggleSelectionMode(section) {
+            if (activeSection === section) {
+                // Already active, exit mode
+                exitSelectionMode();
+                return;
+            }
+
+            // Deactivate any active section
+            if (activeSection) {
+                exitSelectionMode();
+            }
+
+            activeSection = section;
+            const sectionList = document.getElementById(`${section}-list`);
+            if (!sectionList) return;
+
+            // Show selection checkboxes for tasks in this section
+            const checkboxes = sectionList.querySelectorAll('.selection-checkbox');
+            checkboxes.forEach(cb => cb.style.display = 'block');
+
+            // Optionally hide the individual toggle checkboxes to reduce clutter? Let's keep both for now.
+            // We'll hide the toggle checkboxes to avoid confusion.
+            const toggleCheckboxes = sectionList.querySelectorAll('.checkbox-form');
+            toggleCheckboxes.forEach(form => form.style.display = 'none');
+
+            // Show batch actions container
+            const batchActions = document.getElementById('batch-actions');
+            batchActions.style.display = 'block';
+
+            // Update the select link text to "Cancel"
+            const selectLink = document.querySelector(`.select-link[data-section="${section}"]`);
+            if (selectLink) selectLink.textContent = 'Cancel';
+
+            // Add event listeners to batch buttons if not already
+            attachBatchListeners(section);
+        }
+
+        function exitSelectionMode() {
+            if (!activeSection) return;
+
+            const sectionList = document.getElementById(`${activeSection}-list`);
+            if (sectionList) {
+                // Hide selection checkboxes
+                const checkboxes = sectionList.querySelectorAll('.selection-checkbox');
+                checkboxes.forEach(cb => cb.style.display = 'none');
+                // Show individual toggle checkboxes again
+                const toggleCheckboxes = sectionList.querySelectorAll('.checkbox-form');
+                toggleCheckboxes.forEach(form => form.style.display = 'flex');
+                // Uncheck all selection checkboxes
+                const selectedBoxes = sectionList.querySelectorAll('.task-select');
+                selectedBoxes.forEach(cb => cb.checked = false);
+            }
+
+            // Hide batch actions
+            const batchActions = document.getElementById('batch-actions');
+            batchActions.style.display = 'none';
+
+            // Reset select link text
+            const selectLink = document.querySelector(`.select-link[data-section="${activeSection}"]`);
+            if (selectLink) selectLink.textContent = 'Select';
+
+            activeSection = null;
+        }
+
+        function getSelectedTaskIds() {
+            if (!activeSection) return [];
+            const sectionList = document.getElementById(`${activeSection}-list`);
+            if (!sectionList) return [];
+            const checkboxes = sectionList.querySelectorAll('.task-select:checked');
+            return Array.from(checkboxes).map(cb => cb.value);
+        }
+
+        function attachBatchListeners(section) {
+            const batchActions = document.getElementById('batch-actions');
+            const completeBtn = batchActions.querySelector('.complete-btn');
+            const incompleteBtn = batchActions.querySelector('.incomplete-btn');
+            const deleteBtn = batchActions.querySelector('.delete-btn');
+            const cancelLink = batchActions.querySelector('.cancel-select');
+
+            // Remove old listeners to avoid duplicates
+            const newComplete = completeBtn.cloneNode(true);
+            completeBtn.parentNode.replaceChild(newComplete, completeBtn);
+            const newIncomplete = incompleteBtn.cloneNode(true);
+            incompleteBtn.parentNode.replaceChild(newIncomplete, incompleteBtn);
+            const newDelete = deleteBtn.cloneNode(true);
+            deleteBtn.parentNode.replaceChild(newDelete, deleteBtn);
+            const newCancel = cancelLink.cloneNode(true);
+            cancelLink.parentNode.replaceChild(newCancel, cancelLink);
+
+            newComplete.addEventListener('click', (e) => {
+                e.preventDefault();
+                const ids = getSelectedTaskIds();
+                if (ids.length === 0) {
+                    alert('No tasks selected');
+                    return;
+                }
+                sendBatchAction('complete', ids);
+            });
+            newIncomplete.addEventListener('click', (e) => {
+                e.preventDefault();
+                const ids = getSelectedTaskIds();
+                if (ids.length === 0) {
+                    alert('No tasks selected');
+                    return;
+                }
+                sendBatchAction('incomplete', ids);
+            });
+            newDelete.addEventListener('click', (e) => {
+                e.preventDefault();
+                const ids = getSelectedTaskIds();
+                if (ids.length === 0) {
+                    alert('No tasks selected');
+                    return;
+                }
+                if (confirm(`Delete ${ids.length} task(s)?`)) {
+                    sendBatchAction('delete', ids);
+                }
+            });
+            newCancel.addEventListener('click', (e) => {
+                e.preventDefault();
+                exitSelectionMode();
+            });
+        }
+
+        function sendBatchAction(action, taskIds) {
+            // Determine endpoint
+            let endpoint = '';
+            if (action === 'complete') endpoint = '/batch/complete';
+            else if (action === 'incomplete') endpoint = '/batch/incomplete';
+            else if (action === 'delete') endpoint = '/batch/delete';
+            else return;
+
+            // Prepare form data
+            const formData = new URLSearchParams();
+            taskIds.forEach(id => formData.append('task_ids', id));
+
+            fetch(endpoint, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: formData
+            })
+            .then(response => {
+                if (!response.ok) throw new Error('Batch operation failed');
+                location.reload(); // Reload to reflect changes
+            })
+            .catch(err => {
+                console.error('Error:', err);
+                alert('Failed to perform batch operation.');
+            });
+        }
+
+        // Attach select link click handlers
+        document.querySelectorAll('.select-link').forEach(link => {
+            link.addEventListener('click', (e) => {
+                e.preventDefault();
+                const section = link.dataset.section;
+                toggleSelectionMode(section);
+            });
+        });
+
+        // Inline edit logic (unchanged)
         document.querySelectorAll('.btn-edit').forEach(button => {
             button.addEventListener('click', function() {
                 const li = this.closest('.todo-item');
                 const titleSpan = li.querySelector('.todo-title');
                 const editInput = li.querySelector('.edit-input');
-                // Show input, hide title
                 titleSpan.style.display = 'none';
                 editInput.style.display = 'block';
                 editInput.focus();
-                // Select all text
                 editInput.select();
             });
         });
 
-        // When input loses focus or Enter is pressed, save changes
         document.querySelectorAll('.edit-input').forEach(input => {
             const saveChange = function() {
                 const li = input.closest('.todo-item');
@@ -93,14 +276,12 @@
                 const taskId = input.dataset.id;
 
                 if (newTitle === "") {
-                    // If empty, revert to original
                     input.value = titleSpan.innerText;
                     titleSpan.style.display = 'block';
                     input.style.display = 'none';
                     return;
                 }
 
-                // Send update to server
                 fetch(`/edit/${taskId}`, {
                     method: 'POST',
                     headers: {
@@ -110,13 +291,11 @@
                 })
                 .then(response => {
                     if (!response.ok) throw new Error('Update failed');
-                    // Reload the page to reflect changes (simple)
                     location.reload();
                 })
                 .catch(err => {
                     console.error('Error updating task:', err);
                     alert('Failed to update task.');
-                    // Revert to original
                     input.value = titleSpan.innerText;
                     titleSpan.style.display = 'block';
                     input.style.display = 'none';

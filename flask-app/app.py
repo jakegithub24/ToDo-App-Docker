@@ -80,5 +80,29 @@ def add_todo_json():
     db.session.commit()
     return jsonify(new_todo.to_dict()), 201
 
+@app.route('/batch/complete', methods=['POST'])
+def batch_complete():
+    task_ids = request.form.getlist('task_ids')
+    if task_ids:
+        Todo.query.filter(Todo.id.in_(task_ids)).update({Todo.completed: True}, synchronize_session=False)
+        db.session.commit()
+    return redirect(url_for('index'))
+
+@app.route('/batch/incomplete', methods=['POST'])
+def batch_incomplete():
+    task_ids = request.form.getlist('task_ids')
+    if task_ids:
+        Todo.query.filter(Todo.id.in_(task_ids)).update({Todo.completed: False}, synchronize_session=False)
+        db.session.commit()
+    return redirect(url_for('index'))
+
+@app.route('/batch/delete', methods=['POST'])
+def batch_delete():
+    task_ids = request.form.getlist('task_ids')
+    if task_ids:
+        Todo.query.filter(Todo.id.in_(task_ids)).delete(synchronize_session=False)
+        db.session.commit()
+    return redirect(url_for('index'))
+
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
