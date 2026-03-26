@@ -12,8 +12,28 @@
 
         <form action="/add" method="POST" class="todo-form">
             <input type="text" name="title" placeholder="Enter a new task..." required>
+            <select name="category" class="category-select">
+                <option value="none">No category</option>
+                {% for cat in categories %}
+                    <option value="{{ cat.id }}">{{ cat.name }}</option>
+                {% endfor %}
+            </select>
             <button type="submit">Add</button>
         </form>
+
+        <div class="search-filter-bar">
+            <form action="/" method="GET" class="search-form">
+                <input type="text" name="q" placeholder="Search tasks..." value="{{ search_query }}">
+                <select name="cat" onchange="this.form.submit()">
+                    <option value="all" {% if selected_category == 'all' %}selected{% endif %}>All categories</option>
+                    {% for cat in categories %}
+                        <option value="{{ cat.id }}" {% if selected_category == cat.id|string %}selected{% endif %}>{{ cat.name }}</option>
+                    {% endfor %}
+                </select>
+                <button type="submit">Search</button>
+                <a href="/" class="clear-filter">Clear</a>
+            </form>
+        </div>
 
         <!-- Incomplete tasks section -->
         <div class="tasks-section" id="incomplete-section">
@@ -21,7 +41,6 @@
                 <h2>Tasks to do</h2>
                 <a href="#" class="select-link" data-section="incomplete">Select</a>
             </div>
-            <!-- Batch actions for this section -->
             <div class="batch-actions" id="batch-incomplete" style="display:none;">
                 <button class="batch-btn complete-btn">Mark Complete</button>
                 <button class="batch-btn incomplete-btn">Mark Incomplete</button>
@@ -49,7 +68,7 @@
                         </div>
                     </li>
                 {% else %}
-                    <li class="empty">No pending tasks. Add one above!</li>
+                    <li class="empty">No pending tasks.</li>
                 {% endfor %}
             </ul>
         </div>
@@ -311,6 +330,8 @@
                 }
             });
         });
+        function currentUrlWithParams() {
+            const urlParams = new URLSearchParams(window.location.search);
+            return window.location.pathname + '?' + urlParams.toString();
+        }
     </script>
-</body>
-</html>
