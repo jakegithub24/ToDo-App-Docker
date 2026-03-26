@@ -18,8 +18,10 @@
         <ul class="category-list">
             {% for cat in categories %}
                 <li class="category-item" data-id="{{ cat.id }}">
-                    <span class="category-name">{{ cat.name }}</span>
-                    <span class="category-count">({{ category_counts[cat.id] }})</span>
+                    <div class="category-label">
+                        <span class="category-name">{{ cat.name }}</span>
+                        <span class="category-count">({{ category_counts[cat.id] }})</span>
+                    </div>
                     <div class="category-actions">
                         <button class="edit-category" data-id="{{ cat.id }}" data-name="{{ cat.name }}"><i class="fas fa-edit"></i></button>
                         <form action="/category/delete/{{ cat.id }}" method="POST" class="delete-category-form" style="display:inline;">

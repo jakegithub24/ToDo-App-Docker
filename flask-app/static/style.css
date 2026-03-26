@@ -202,6 +202,13 @@ aside.categories-sidebar {
     flex-wrap: wrap;
 }
 
+.category-label {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 0.35rem;
+    min-width: 0;
+}
+
 .category-name {
     font-weight: bold;
     min-width: 0;
@@ -336,6 +343,17 @@ h1 {
     text-decoration: none;
     border-radius: 4px;
     text-align: center;
+}
+
+.search-form button,
+.search-form .clear-filter {
+    height: 40px;
+    font-size: 14px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+    box-sizing: border-box;
 }
 
 /* Task sections */

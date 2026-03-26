@@ -46,6 +46,14 @@
         const sidebar = document.querySelector('.categories-sidebar');
         const toggleBtn = document.getElementById('toggleSidebar');
         const isMobileLayout = () => window.matchMedia('(max-width: 900px)').matches;
+        function applyDefaultSidebarState() {
+            if (!sidebar) return;
+            if (isMobileLayout()) {
+                sidebar.classList.add('collapsed');
+            } else {
+                sidebar.classList.remove('collapsed');
+            }
+        }
         function updateSidebarToggleIcon() {
             if (!toggleBtn || !sidebar) return;
             const collapsed = sidebar.classList.contains('collapsed');
@@ -64,6 +72,7 @@
                 sidebar.classList.toggle('collapsed');
                 updateSidebarToggleIcon();
             });
+            applyDefaultSidebarState();
             updateSidebarToggleIcon();
             window.addEventListener('resize', updateSidebarToggleIcon, { passive: true });
         }
