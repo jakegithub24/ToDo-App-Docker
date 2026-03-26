@@ -10,6 +10,18 @@
     <div class="container">
         <h1>My ToDo List</h1>
 
+        <!-- Flash messages -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <div class="flash-messages">
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category }}">{{ message }}</div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+
+        <!-- Add task form -->
         <form action="/add" method="POST" class="todo-form">
             <input type="text" name="title" placeholder="Enter a new task..." required>
             <select name="category" class="category-select">
@@ -21,6 +33,7 @@
             <button type="submit">Add</button>
         </form>
 
+        <!-- Search and filter bar -->
         <div class="search-filter-bar">
             <form action="/" method="GET" class="search-form">
                 <input type="text" name="q" placeholder="Search tasks..." value="{{ search_query }}">
@@ -32,6 +45,25 @@
                 </select>
                 <button type="submit">Search</button>
                 <a href="/" class="clear-filter">Clear</a>
+            </form>
+        </div>
+
+        <!-- Category management section -->
+        <div class="category-management">
+            <h3>Manage Categories</h3>
+            <div class="category-list">
+                {% for cat in categories %}
+                    <div class="category-item">
+                        <span>{{ cat.name }}</span>
+                        <form action="/category/delete/{{ cat.id }}" method="POST" style="display:inline;">
+                            <button type="submit" class="delete-cat-btn" onclick="return confirm('Delete category \'{{ cat.name }}\'? Tasks using it will keep their category (become uncategorized).');">Delete</button>
+                        </form>
+                    </div>
+                {% endfor %}
+            </div>
+            <form action="/category/add" method="POST" class="add-category-form">
+                <input type="text" name="name" placeholder="New category name" required>
+                <button type="submit">Add Category</button>
             </form>
         </div>
 
@@ -58,7 +90,22 @@
                         </form>
                         <div class="title-container">
                             <span class="todo-title">{{ todo.title }}</span>
-                            <input type="text" class="edit-input" style="display:none;" value="{{ todo.title }}" data-id="{{ todo.id }}">
+                            <div class="edit-container" style="display:none;">
+                                <input type="text" class="edit-title-input" value="{{ todo.title }}">
+                                <select class="edit-category-select">
+                                    <option value="none">No category</option>
+                                    {% for cat in categories %}
+                                        <option value="{{ cat.id }}" {% if todo.category_id == cat.id %}selected{% endif %}>{{ cat.name }}</option>
+                                    {% endfor %}
+                                </select>
+                                <button class="save-edit-btn">Save</button>
+                                <button class="cancel-edit-btn">Cancel</button>
+                            </div>
+                            {% if todo.category %}
+                                <span class="category-badge" style="background-color: {{ todo.category.name|category_color }};">{{ todo.category.name }}</span>
+                            {% else %}
+                                <span class="category-badge no-category">No category</span>
+                            {% endif %}
                         </div>
                         <div class="todo-actions">
                             <button class="btn-edit">Edit</button>
@@ -97,7 +144,22 @@
                             </form>
                             <div class="title-container">
                                 <span class="todo-title completed">{{ todo.title }}</span>
-                                <input type="text" class="edit-input" style="display:none;" value="{{ todo.title }}" data-id="{{ todo.id }}">
+                                <div class="edit-container" style="display:none;">
+                                    <input type="text" class="edit-title-input" value="{{ todo.title }}">
+                                    <select class="edit-category-select">
+                                        <option value="none">No category</option>
+                                        {% for cat in categories %}
+                                            <option value="{{ cat.id }}" {% if todo.category_id == cat.id %}selected{% endif %}>{{ cat.name }}</option>
+                                        {% endfor %}
+                                    </select>
+                                    <button class="save-edit-btn">Save</button>
+                                    <button class="cancel-edit-btn">Cancel</button>
+                                </div>
+                                {% if todo.category %}
+                                    <span class="category-badge" style="background-color: {{ todo.category.name|category_color }};">{{ todo.category.name }}</span>
+                                {% else %}
+                                    <span class="category-badge no-category">No category</span>
+                                {% endif %}
                             </div>
                             <div class="todo-actions">
                                 <button class="btn-edit">Edit</button>
@@ -113,16 +175,21 @@
     </div>
 
     <script>
-        let activeSection = null; // 'incomplete' or 'completed'
+        // Helper to get current filter parameters from URL
+        function getFilterParams() {
+            const urlParams = new URLSearchParams(window.location.search);
+            return { q: urlParams.get('q') || '', cat: urlParams.get('cat') || 'all' };
+        }
+
+        // Batch selection mode
+        let activeSection = null;
 
         function toggleSelectionMode(section) {
             if (activeSection === section) {
                 exitSelectionMode();
                 return;
             }
-            if (activeSection) {
-                exitSelectionMode();
-            }
+            if (activeSection) exitSelectionMode();
             activeSection = section;
 
             const sectionDiv = document.getElementById(`${section}-section`);
@@ -131,53 +198,29 @@
             const selectLink = sectionDiv.querySelector('.select-link');
 
             // Show selection checkboxes
-            const selectionCheckboxes = sectionList.querySelectorAll('.selection-checkbox');
-            selectionCheckboxes.forEach(cb => cb.style.display = 'block');
-
+            sectionList.querySelectorAll('.selection-checkbox').forEach(cb => cb.style.display = 'block');
             // Hide individual toggle checkboxes
-            const toggleForms = sectionList.querySelectorAll('.checkbox-form');
-            toggleForms.forEach(form => form.style.display = 'none');
-
-            // Hide edit/delete buttons for tasks in this section
-            const todoActions = sectionList.querySelectorAll('.todo-actions');
-            todoActions.forEach(actions => actions.style.display = 'none');
-
-            // Hide the "Select" link, show batch actions
+            sectionList.querySelectorAll('.checkbox-form').forEach(form => form.style.display = 'none');
+            // Hide edit/delete buttons
+            sectionList.querySelectorAll('.todo-actions').forEach(actions => actions.style.display = 'none');
+            // Hide select link, show batch actions
             selectLink.style.display = 'none';
-            batchActions.style.display = 'flex'; // Use flex for alignment
-
-            // Attach batch listeners
+            batchActions.style.display = 'flex';
             attachBatchListeners(section);
         }
 
         function exitSelectionMode() {
             if (!activeSection) return;
-
-            const sectionDiv = document.getElementById(`${activeSection}-section`);
             const sectionList = document.getElementById(`${activeSection}-list`);
             const batchActions = document.getElementById(`batch-${activeSection}`);
-            const selectLink = sectionDiv.querySelector('.select-link');
+            const selectLink = document.querySelector(`#${activeSection}-section .select-link`);
 
-            // Hide selection checkboxes
-            const selectionCheckboxes = sectionList.querySelectorAll('.selection-checkbox');
-            selectionCheckboxes.forEach(cb => cb.style.display = 'none');
-
-            // Show individual toggle checkboxes
-            const toggleForms = sectionList.querySelectorAll('.checkbox-form');
-            toggleForms.forEach(form => form.style.display = 'flex');
-
-            // Show edit/delete buttons again
-            const todoActions = sectionList.querySelectorAll('.todo-actions');
-            todoActions.forEach(actions => actions.style.display = 'flex');
-
-            // Show "Select" link, hide batch actions
+            sectionList.querySelectorAll('.selection-checkbox').forEach(cb => cb.style.display = 'none');
+            sectionList.querySelectorAll('.checkbox-form').forEach(form => form.style.display = 'flex');
+            sectionList.querySelectorAll('.todo-actions').forEach(actions => actions.style.display = 'flex');
             selectLink.style.display = 'inline';
             batchActions.style.display = 'none';
-
-            // Uncheck all selection checkboxes
-            const selectedBoxes = sectionList.querySelectorAll('.task-select');
-            selectedBoxes.forEach(cb => cb.checked = false);
-
+            sectionList.querySelectorAll('.task-select').forEach(cb => cb.checked = false);
             activeSection = null;
         }
 
@@ -194,7 +237,6 @@
             const deleteBtn = batchActions.querySelector('.delete-btn');
             const cancelLink = batchActions.querySelector('.cancel-select');
 
-            // Remove existing listeners by cloning
             const newComplete = completeBtn.cloneNode(true);
             completeBtn.parentNode.replaceChild(newComplete, completeBtn);
             const newIncomplete = incompleteBtn.cloneNode(true);
@@ -207,31 +249,20 @@
             newComplete.addEventListener('click', (e) => {
                 e.preventDefault();
                 const ids = getSelectedTaskIds(section);
-                if (ids.length === 0) {
-                    alert('No tasks selected');
-                    return;
-                }
+                if (ids.length === 0) return alert('No tasks selected');
                 sendBatchAction('complete', ids);
             });
             newIncomplete.addEventListener('click', (e) => {
                 e.preventDefault();
                 const ids = getSelectedTaskIds(section);
-                if (ids.length === 0) {
-                    alert('No tasks selected');
-                    return;
-                }
+                if (ids.length === 0) return alert('No tasks selected');
                 sendBatchAction('incomplete', ids);
             });
             newDelete.addEventListener('click', (e) => {
                 e.preventDefault();
                 const ids = getSelectedTaskIds(section);
-                if (ids.length === 0) {
-                    alert('No tasks selected');
-                    return;
-                }
-                if (confirm(`Delete ${ids.length} task(s)?`)) {
-                    sendBatchAction('delete', ids);
-                }
+                if (ids.length === 0) return alert('No tasks selected');
+                if (confirm(`Delete ${ids.length} task(s)?`)) sendBatchAction('delete', ids);
             });
             newCancel.addEventListener('click', (e) => {
                 e.preventDefault();
@@ -246,92 +277,93 @@
             else if (action === 'delete') endpoint = '/batch/delete';
             else return;
 
+            const params = getFilterParams();
             const formData = new URLSearchParams();
             taskIds.forEach(id => formData.append('task_ids', id));
+            formData.append('q', params.q);
+            formData.append('cat', params.cat);
 
             fetch(endpoint, {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded',
-                },
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
                 body: formData
             })
             .then(response => {
                 if (!response.ok) throw new Error('Batch operation failed');
-                location.reload();
+                window.location.href = `/?q=${encodeURIComponent(params.q)}&cat=${params.cat}`;
             })
-            .catch(err => {
-                console.error('Error:', err);
-                alert('Failed to perform batch operation.');
-            });
+            .catch(err => alert('Failed to perform batch operation.'));
         }
 
-        // Attach select link click handlers
-        document.querySelectorAll('.select-link').forEach(link => {
-            link.addEventListener('click', (e) => {
-                e.preventDefault();
-                const section = link.dataset.section;
-                toggleSelectionMode(section);
-            });
-        });
-
-        // Inline edit logic (unchanged)
+        // Inline edit logic
         document.querySelectorAll('.btn-edit').forEach(button => {
             button.addEventListener('click', function() {
                 const li = this.closest('.todo-item');
                 const titleSpan = li.querySelector('.todo-title');
-                const editInput = li.querySelector('.edit-input');
+                const categoryBadge = li.querySelector('.category-badge');
+                const editContainer = li.querySelector('.edit-container');
+                const titleInput = editContainer.querySelector('.edit-title-input');
+                const categorySelect = editContainer.querySelector('.edit-category-select');
+
+                // Show edit container, hide title and badge
                 titleSpan.style.display = 'none';
-                editInput.style.display = 'block';
-                editInput.focus();
-                editInput.select();
+                if (categoryBadge) categoryBadge.style.display = 'none';
+                editContainer.style.display = 'flex';
+                titleInput.focus();
+                titleInput.select();
             });
         });
 
-        document.querySelectorAll('.edit-input').forEach(input => {
-            const saveChange = function() {
-                const li = input.closest('.todo-item');
-                const titleSpan = li.querySelector('.todo-title');
-                const newTitle = input.value.trim();
-                const taskId = input.dataset.id;
+        document.querySelectorAll('.save-edit-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const li = this.closest('.todo-item');
+                const taskId = li.dataset.id;
+                const titleInput = li.querySelector('.edit-title-input');
+                const categorySelect = li.querySelector('.edit-category-select');
+                const newTitle = titleInput.value.trim();
+                const newCategory = categorySelect.value;
 
-                if (newTitle === "") {
-                    input.value = titleSpan.innerText;
-                    titleSpan.style.display = 'block';
-                    input.style.display = 'none';
-                    return;
-                }
+                if (!newTitle) return;
+
+                const params = getFilterParams();
+                const formData = new URLSearchParams();
+                formData.append('title', newTitle);
+                formData.append('category', newCategory);
+                formData.append('q', params.q);
+                formData.append('cat', params.cat);
 
                 fetch(`/edit/${taskId}`, {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/x-www-form-urlencoded',
-                    },
-                    body: `title=${encodeURIComponent(newTitle)}`
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: formData
                 })
                 .then(response => {
                     if (!response.ok) throw new Error('Update failed');
-                    location.reload();
+                    window.location.href = `/?q=${encodeURIComponent(params.q)}&cat=${params.cat}`;
                 })
-                .catch(err => {
-                    console.error('Error updating task:', err);
-                    alert('Failed to update task.');
-                    input.value = titleSpan.innerText;
-                    titleSpan.style.display = 'block';
-                    input.style.display = 'none';
-                });
-            };
-
-            input.addEventListener('blur', saveChange);
-            input.addEventListener('keypress', function(e) {
-                if (e.key === 'Enter') {
-                    e.preventDefault();
-                    saveChange();
-                }
+                .catch(err => alert('Failed to update task.'));
             });
         });
-        function currentUrlWithParams() {
-            const urlParams = new URLSearchParams(window.location.search);
-            return window.location.pathname + '?' + urlParams.toString();
-        }
+
+        document.querySelectorAll('.cancel-edit-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const li = this.closest('.todo-item');
+                const titleSpan = li.querySelector('.todo-title');
+                const categoryBadge = li.querySelector('.category-badge');
+                const editContainer = li.querySelector('.edit-container');
+                titleSpan.style.display = 'block';
+                if (categoryBadge) categoryBadge.style.display = 'inline-block';
+                editContainer.style.display = 'none';
+            });
+        });
+
+        // Select link click handlers
+        document.querySelectorAll('.select-link').forEach(link => {
+            link.addEventListener('click', (e) => {
+                e.preventDefault();
+                toggleSelectionMode(link.dataset.section);
+            });
+        });
     </script>
+</body>
+</html>

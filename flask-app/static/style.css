@@ -6,7 +6,7 @@ body {
 }
 
 .container {
-    max-width: 600px;
+    max-width: 800px;
     margin: 2rem auto;
     background: white;
     padding: 1.5rem;
@@ -19,47 +19,132 @@ h1 {
     color: #333;
 }
 
+/* Flash messages */
+.flash-messages {
+    margin-bottom: 1rem;
+}
+
+.alert {
+    padding: 0.5rem;
+    border-radius: 4px;
+    margin-bottom: 0.5rem;
+}
+
+.alert-success {
+    background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb;
+}
+
+.alert-danger {
+    background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb;
+}
+
+/* Forms */
 .todo-form {
     display: flex;
     gap: 0.5rem;
     margin-bottom: 1.5rem;
 }
-
 .todo-form input[type="text"] {
-    flex: 2;
-    padding: 0.5rem;
-    font-size: 1rem;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    outline: none;
+    flex: 2; padding: 0.5rem; font-size: 1rem; border: 1px solid #ddd; border-radius: 4px;
 }
-
+.category-select {
+    flex: 1; padding: 0.5rem; font-size: 1rem; border: 1px solid #ddd; border-radius: 4px; background: white;
+}
 .todo-form button {
-    flex: 0 0 auto;
-    padding: 0.5rem 1rem;
-    background-color: #28a745;
-    color: white;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
+    padding: 0.5rem 1rem; background-color: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer;
 }
-
-
 .todo-form button:hover {
     background-color: #218838;
 }
 
+/* Search/filter bar */
+.search-filter-bar {
+    margin: 1rem 0 1.5rem 0;
+    padding: 0.5rem;
+    background-color: #f8f9fa;
+    border-radius: 4px;
+}
+.search-form {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+}
+.search-form input[type="text"] {
+    flex: 2; padding: 0.5rem; font-size: 1rem; border: 1px solid #ddd; border-radius: 4px;
+}
+.search-form select {
+    flex: 1; padding: 0.5rem; font-size: 1rem; border: 1px solid #ddd; border-radius: 4px; background: white;
+}
+.search-form button {
+    padding: 0.5rem 1rem; background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer;
+}
+.clear-filter {
+    padding: 0.5rem 1rem; background-color: #6c757d; color: white; text-decoration: none; border-radius: 4px; text-align: center;
+}
+
+/* Category management */
+.category-management {
+    margin: 1.5rem 0;
+    padding: 1rem;
+    background-color: #f8f9fa;
+    border-radius: 4px;
+}
+.category-management h3 {
+    margin: 0 0 0.5rem 0; font-size: 1.1rem;
+}
+.category-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+}
+.category-item {
+    background: white;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    border: 1px solid #ddd;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+.delete-cat-btn {
+    background: none;
+    border: none;
+    color: #dc3545;
+    cursor: pointer;
+    font-size: 0.8rem;
+}
+.delete-cat-btn:hover {
+    text-decoration: underline;
+}
+.add-category-form {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+}
+.add-category-form input {
+    flex: 1; padding: 0.25rem; font-size: 0.9rem; border: 1px solid #ddd; border-radius: 4px;
+}
+.add-category-form button {
+    padding: 0.25rem 0.5rem; background-color: #17a2b8; color: white; border: none; border-radius: 4px; cursor: pointer;
+}
+
+/* Task list */
 .tasks-section h2 {
-    font-size: 1.2rem;
-    color: #555;
-    margin: 1rem 0 0.5rem;
+    font-size: 1.2rem; color: #555; margin: 0;
 }
-
+.section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 0.5rem;
+}
+.select-link {
+    font-size: 0.9rem; color: #007bff; text-decoration: none; cursor: pointer;
+}
 .todo-list {
-    list-style: none;
-    padding: 0;
+    list-style: none; padding: 0;
 }
-
 .todo-item {
     display: flex;
     align-items: center;
@@ -69,41 +154,91 @@ h1 {
     border-radius: 4px;
     border-left: 4px solid #28a745;
 }
-
-/* For completed tasks, use a different left border color */
 .completed-list .todo-item {
     border-left-color: #6c757d;
 }
 
+/* Selection checkbox */
+.selection-checkbox { margin-right: 0.5rem; }
+.task-select {
+    width: 1rem; height: 1rem; cursor: pointer;
+}
+
+/* Checkbox for toggling completion */
 .checkbox-form {
     margin-right: 0.5rem;
 }
-
 .task-checkbox {
-    width: 1.2rem;
-    height: 1.2rem;
-    cursor: pointer;
+    width: 1.2rem; height: 1.2rem; cursor: pointer;
 }
 
-.todo-title {
+/* Title container */
+.title-container {
     flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+.todo-title {
     font-size: 1rem;
 }
-
 .todo-title.completed {
-    text-decoration: line-through;
-    color: #888;
+    text-decoration: line-through; color: #888;
 }
 
+/* Category badge */
+.category-badge {
+    display: inline-block;
+    padding: 0.2rem 0.5rem;
+    border-radius: 12px;
+    font-size: 0.7rem;
+    font-weight: bold;
+    color: white;
+    background-color: #6c757d;
+}
+.no-category {
+    background-color: #e9ecef; color: #6c757d;
+}
+
+/* Edit container */
+.edit-container {
+    display: flex;
+    gap: 0.5rem;
+    width: 100%;
+}
+.edit-title-input {
+    flex: 2;
+    padding: 0.25rem;
+    font-size: 1rem;
+    border: 1px solid #007bff;
+    border-radius: 4px;
+}
+.edit-category-select {
+    flex: 1;
+    padding: 0.25rem;
+    font-size: 0.9rem;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
+.save-edit-btn, .cancel-edit-btn {
+    padding: 0.25rem 0.5rem;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+.save-edit-btn {
+    background-color: #28a745; color: white;
+}
+.cancel-edit-btn {
+    background-color: #6c757d; color: white;
+}
+
+/* Action buttons */
 .todo-actions {
     display: flex;
     gap: 0.5rem;
 }
-
-.inline-form {
-    display: inline;
-}
-
 .btn-edit, .btn-delete {
     padding: 0.25rem 0.5rem;
     border: none;
@@ -111,92 +246,20 @@ h1 {
     cursor: pointer;
     font-size: 0.8rem;
 }
-
 .btn-edit {
-    background-color: #ffc107;
-    color: #212529;
+    background-color: #ffc107; color: #212529;
 }
-
+.btn-delete {
+    background-color: #dc3545; color: white;
+}
 .btn-edit:hover {
     background-color: #e0a800;
 }
-
-.btn-delete {
-    background-color: #dc3545;
-    color: white;
-}
-
 .btn-delete:hover {
     background-color: #c82333;
 }
 
-.empty {
-    text-align: center;
-    color: #777;
-    font-style: italic;
-    padding: 1rem;
-}
-
-.section-divider {
-    margin: 1.5rem 0;
-    border: none;
-    height: 1px;
-    background: #ddd;
-}
-
-.title-container {
-    flex: 1;
-    margin-left: 0.5rem;
-}
-
-.todo-title {
-    display: block;
-    width: 100%;
-}
-
-.edit-input {
-    width: 100%;
-    padding: 0.25rem;
-    font-size: 1rem;
-    border: 1px solid #007bff;
-    border-radius: 4px;
-    outline: none;
-}
-
-.section-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: baseline;
-    margin-bottom: 0.5rem;
-}
-
-.section-header h2 {
-    margin: 0;
-}
-
-.select-link {
-    font-size: 0.9rem;
-    color: #007bff;
-    text-decoration: none;
-    cursor: pointer;
-}
-
-.select-link:hover {
-    text-decoration: underline;
-}
-
-/* Selection checkbox column */
-.selection-checkbox {
-    margin-right: 0.5rem;
-}
-
-.task-select {
-    width: 1rem;
-    height: 1rem;
-    cursor: pointer;
-}
-
-/* Batch action buttons */
+/* Batch actions */
 .batch-actions {
     display: flex;
     justify-content: center;
@@ -206,7 +269,6 @@ h1 {
     background-color: #f8f9fa;
     border-radius: 4px;
 }
-
 .batch-btn {
     padding: 0.4rem 0.8rem;
     border: none;
@@ -214,119 +276,28 @@ h1 {
     cursor: pointer;
     font-size: 0.9rem;
 }
-
 .complete-btn {
-    background-color: #28a745;
-    color: white;
+    background-color: #28a745; color: white;
 }
-
-.complete-btn:hover {
-    background-color: #218838;
-}
-
 .incomplete-btn {
-    background-color: #ffc107;
-    color: #212529;
+    background-color: #ffc107; color: #212529;
 }
-
-.incomplete-btn:hover {
-    background-color: #e0a800;
-}
-
 .delete-btn {
-    background-color: #dc3545;
-    color: white;
+    background-color: #dc3545; color: white;
 }
-
-.delete-btn:hover {
-    background-color: #c82333;
-}
-
 .cancel-select {
-    margin-left: 0.5rem;
-    color: #6c757d;
-    text-decoration: none;
-    font-size: 0.9rem;
-    align-self: center;
+    margin-left: 0.5rem; color: #6c757d; text-decoration: none; font-size: 0.9rem; align-self: center;
 }
 
-.cancel-select:hover {
-    text-decoration: underline;
-}
-
-.tasks-section .batch-actions {
-    margin-top: 0.5rem;
-}
-
-.todo-item {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-}
-
-/* Search and filter bar */
-.search-filter-bar {
-    margin: 1rem 0 1.5rem 0;
-    padding: 0.5rem;
-    background-color: #f8f9fa;
-    border-radius: 4px;
-}
-
-.search-form {
-    display: flex;
-    gap: 0.5rem;
-    align-items: center;
-}
-
-.search-form input[type="text"] {
-    flex: 2;
-    padding: 0.5rem;
-    font-size: 1rem;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-}
-
-.search-form select {
-    flex: 1;
-    padding: 0.5rem;
-    font-size: 1rem;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    background-color: white;
-}
-
-.search-form button {
-    padding: 0.5rem 1rem;
-    background-color: #007bff;
-    color: white;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-}
-
-.search-form button:hover {
-    background-color: #0056b3;
-}
-
-.clear-filter {
-    padding: 0.5rem 1rem;
-    background-color: #6c757d;
-    color: white;
-    text-decoration: none;
-    border-radius: 4px;
+.empty {
     text-align: center;
+    color: #777;
+    font-style: italic;
+    padding: 1rem;
 }
-
-.clear-filter:hover {
-    background-color: #545b62;
-}
-
-/* Category select in add form */
-.category-select {
-    flex: 1;
-    padding: 0.5rem;
-    font-size: 1rem;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    background-color: white;
+.section-divider {
+    margin: 1.5rem 0;
+    border: none;
+    height: 1px;
+    background: #ddd;
 }
