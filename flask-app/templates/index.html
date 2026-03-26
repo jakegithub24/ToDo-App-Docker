@@ -16,10 +16,17 @@
         </form>
 
         <!-- Incomplete tasks section -->
-        <div class="tasks-section">
+        <div class="tasks-section" id="incomplete-section">
             <div class="section-header">
                 <h2>Tasks to do</h2>
                 <a href="#" class="select-link" data-section="incomplete">Select</a>
+            </div>
+            <!-- Batch actions for this section -->
+            <div class="batch-actions" id="batch-incomplete" style="display:none;">
+                <button class="batch-btn complete-btn">Mark Complete</button>
+                <button class="batch-btn incomplete-btn">Mark Incomplete</button>
+                <button class="batch-btn delete-btn">Delete</button>
+                <a href="#" class="cancel-select">Cancel</a>
             </div>
             <ul class="todo-list" id="incomplete-list">
                 {% for todo in todos if not todo.completed %}
@@ -49,10 +56,16 @@
 
         {% if todos|selectattr('completed')|list %}
             <hr class="section-divider">
-            <div class="tasks-section">
+            <div class="tasks-section" id="completed-section">
                 <div class="section-header">
                     <h2>Completed tasks</h2>
                     <a href="#" class="select-link" data-section="completed">Select</a>
+                </div>
+                <div class="batch-actions" id="batch-completed" style="display:none;">
+                    <button class="batch-btn complete-btn">Mark Complete</button>
+                    <button class="batch-btn incomplete-btn">Mark Incomplete</button>
+                    <button class="batch-btn delete-btn">Delete</button>
+                    <a href="#" class="cancel-select">Cancel</a>
                 </div>
                 <ul class="todo-list completed-list" id="completed-list">
                     {% for todo in todos if todo.completed %}
@@ -78,101 +91,91 @@
                 </ul>
             </div>
         {% endif %}
-
-        <!-- Hidden container for batch action buttons (will be placed dynamically) -->
-        <div id="batch-actions" style="display:none; text-align: center; margin-top: 20px;">
-            <button class="batch-btn complete-btn">Mark Complete</button>
-            <button class="batch-btn incomplete-btn">Mark Incomplete</button>
-            <button class="batch-btn delete-btn">Delete</button>
-            <a href="#" class="cancel-select">Cancel</a>
-        </div>
     </div>
 
     <script>
-        // Global references
         let activeSection = null; // 'incomplete' or 'completed'
 
-        // Toggle selection mode for a given section
         function toggleSelectionMode(section) {
             if (activeSection === section) {
-                // Already active, exit mode
                 exitSelectionMode();
                 return;
             }
-
-            // Deactivate any active section
             if (activeSection) {
                 exitSelectionMode();
             }
-
             activeSection = section;
+
+            const sectionDiv = document.getElementById(`${section}-section`);
             const sectionList = document.getElementById(`${section}-list`);
-            if (!sectionList) return;
+            const batchActions = document.getElementById(`batch-${section}`);
+            const selectLink = sectionDiv.querySelector('.select-link');
 
-            // Show selection checkboxes for tasks in this section
-            const checkboxes = sectionList.querySelectorAll('.selection-checkbox');
-            checkboxes.forEach(cb => cb.style.display = 'block');
+            // Show selection checkboxes
+            const selectionCheckboxes = sectionList.querySelectorAll('.selection-checkbox');
+            selectionCheckboxes.forEach(cb => cb.style.display = 'block');
 
-            // Optionally hide the individual toggle checkboxes to reduce clutter? Let's keep both for now.
-            // We'll hide the toggle checkboxes to avoid confusion.
-            const toggleCheckboxes = sectionList.querySelectorAll('.checkbox-form');
-            toggleCheckboxes.forEach(form => form.style.display = 'none');
+            // Hide individual toggle checkboxes
+            const toggleForms = sectionList.querySelectorAll('.checkbox-form');
+            toggleForms.forEach(form => form.style.display = 'none');
 
-            // Show batch actions container
-            const batchActions = document.getElementById('batch-actions');
-            batchActions.style.display = 'block';
+            // Hide edit/delete buttons for tasks in this section
+            const todoActions = sectionList.querySelectorAll('.todo-actions');
+            todoActions.forEach(actions => actions.style.display = 'none');
 
-            // Update the select link text to "Cancel"
-            const selectLink = document.querySelector(`.select-link[data-section="${section}"]`);
-            if (selectLink) selectLink.textContent = 'Cancel';
+            // Hide the "Select" link, show batch actions
+            selectLink.style.display = 'none';
+            batchActions.style.display = 'flex'; // Use flex for alignment
 
-            // Add event listeners to batch buttons if not already
+            // Attach batch listeners
             attachBatchListeners(section);
         }
 
         function exitSelectionMode() {
             if (!activeSection) return;
 
+            const sectionDiv = document.getElementById(`${activeSection}-section`);
             const sectionList = document.getElementById(`${activeSection}-list`);
-            if (sectionList) {
-                // Hide selection checkboxes
-                const checkboxes = sectionList.querySelectorAll('.selection-checkbox');
-                checkboxes.forEach(cb => cb.style.display = 'none');
-                // Show individual toggle checkboxes again
-                const toggleCheckboxes = sectionList.querySelectorAll('.checkbox-form');
-                toggleCheckboxes.forEach(form => form.style.display = 'flex');
-                // Uncheck all selection checkboxes
-                const selectedBoxes = sectionList.querySelectorAll('.task-select');
-                selectedBoxes.forEach(cb => cb.checked = false);
-            }
+            const batchActions = document.getElementById(`batch-${activeSection}`);
+            const selectLink = sectionDiv.querySelector('.select-link');
 
-            // Hide batch actions
-            const batchActions = document.getElementById('batch-actions');
+            // Hide selection checkboxes
+            const selectionCheckboxes = sectionList.querySelectorAll('.selection-checkbox');
+            selectionCheckboxes.forEach(cb => cb.style.display = 'none');
+
+            // Show individual toggle checkboxes
+            const toggleForms = sectionList.querySelectorAll('.checkbox-form');
+            toggleForms.forEach(form => form.style.display = 'flex');
+
+            // Show edit/delete buttons again
+            const todoActions = sectionList.querySelectorAll('.todo-actions');
+            todoActions.forEach(actions => actions.style.display = 'flex');
+
+            // Show "Select" link, hide batch actions
+            selectLink.style.display = 'inline';
             batchActions.style.display = 'none';
 
-            // Reset select link text
-            const selectLink = document.querySelector(`.select-link[data-section="${activeSection}"]`);
-            if (selectLink) selectLink.textContent = 'Select';
+            // Uncheck all selection checkboxes
+            const selectedBoxes = sectionList.querySelectorAll('.task-select');
+            selectedBoxes.forEach(cb => cb.checked = false);
 
             activeSection = null;
         }
 
-        function getSelectedTaskIds() {
-            if (!activeSection) return [];
-            const sectionList = document.getElementById(`${activeSection}-list`);
-            if (!sectionList) return [];
+        function getSelectedTaskIds(section) {
+            const sectionList = document.getElementById(`${section}-list`);
             const checkboxes = sectionList.querySelectorAll('.task-select:checked');
             return Array.from(checkboxes).map(cb => cb.value);
         }
 
         function attachBatchListeners(section) {
-            const batchActions = document.getElementById('batch-actions');
+            const batchActions = document.getElementById(`batch-${section}`);
             const completeBtn = batchActions.querySelector('.complete-btn');
             const incompleteBtn = batchActions.querySelector('.incomplete-btn');
             const deleteBtn = batchActions.querySelector('.delete-btn');
             const cancelLink = batchActions.querySelector('.cancel-select');
 
-            // Remove old listeners to avoid duplicates
+            // Remove existing listeners by cloning
             const newComplete = completeBtn.cloneNode(true);
             completeBtn.parentNode.replaceChild(newComplete, completeBtn);
             const newIncomplete = incompleteBtn.cloneNode(true);
@@ -184,7 +187,7 @@
 
             newComplete.addEventListener('click', (e) => {
                 e.preventDefault();
-                const ids = getSelectedTaskIds();
+                const ids = getSelectedTaskIds(section);
                 if (ids.length === 0) {
                     alert('No tasks selected');
                     return;
@@ -193,7 +196,7 @@
             });
             newIncomplete.addEventListener('click', (e) => {
                 e.preventDefault();
-                const ids = getSelectedTaskIds();
+                const ids = getSelectedTaskIds(section);
                 if (ids.length === 0) {
                     alert('No tasks selected');
                     return;
@@ -202,7 +205,7 @@
             });
             newDelete.addEventListener('click', (e) => {
                 e.preventDefault();
-                const ids = getSelectedTaskIds();
+                const ids = getSelectedTaskIds(section);
                 if (ids.length === 0) {
                     alert('No tasks selected');
                     return;
@@ -218,14 +221,12 @@
         }
 
         function sendBatchAction(action, taskIds) {
-            // Determine endpoint
             let endpoint = '';
             if (action === 'complete') endpoint = '/batch/complete';
             else if (action === 'incomplete') endpoint = '/batch/incomplete';
             else if (action === 'delete') endpoint = '/batch/delete';
             else return;
 
-            // Prepare form data
             const formData = new URLSearchParams();
             taskIds.forEach(id => formData.append('task_ids', id));
 
@@ -238,7 +239,7 @@
             })
             .then(response => {
                 if (!response.ok) throw new Error('Batch operation failed');
-                location.reload(); // Reload to reflect changes
+                location.reload();
             })
             .catch(err => {
                 console.error('Error:', err);

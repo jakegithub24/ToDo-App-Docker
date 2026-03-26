@@ -194,14 +194,18 @@ h1 {
 }
 
 /* Batch action buttons */
-#batch-actions {
-    text-align: center;
-    margin: 1rem 0;
+.batch-actions {
+    display: flex;
+    justify-content: center;
+    gap: 0.5rem;
+    margin: 0.5rem 0 1rem 0;
+    padding: 0.5rem;
+    background-color: #f8f9fa;
+    border-radius: 4px;
 }
 
 .batch-btn {
     padding: 0.4rem 0.8rem;
-    margin: 0 0.2rem;
     border: none;
     border-radius: 4px;
     cursor: pointer;
@@ -236,14 +240,19 @@ h1 {
 }
 
 .cancel-select {
-    margin-left: 1rem;
+    margin-left: 0.5rem;
     color: #6c757d;
     text-decoration: none;
     font-size: 0.9rem;
+    align-self: center;
 }
 
 .cancel-select:hover {
     text-decoration: underline;
+}
+
+.tasks-section .batch-actions {
+    margin-top: 0.5rem;
 }
 
 .todo-item {
