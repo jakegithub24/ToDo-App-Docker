@@ -1,404 +1,182 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ToDo App</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-</head>
-<body>
-    <div class="app-container">
-        <!-- Sidebar for categories -->
-        <div class="categories-sidebar">
-            <div class="sidebar-header">
-                <h2>Categories</h2>
-                <button class="toggle-sidebar-btn" id="toggleSidebar"><i class="fas fa-chevron-left"></i></button>
+
+{% extends "base.html" %}
+
+{% block content %}
+<aside class="categories-sidebar">
+    <div class="sidebar-header">
+        <h2>Categories</h2>
+        <button class="toggle-sidebar-btn" id="toggleSidebar"><i class="fas fa-chevron-left"></i></button>
+    </div>
+    <div class="categories-content">
+        <!-- Add category form moved above category list -->
+        <div class="add-category">
+            <form action="/category/add" method="POST" class="add-category-form">
+                <input type="text" name="name" placeholder="New category name" required>
+                <button type="submit"><i class="fas fa-plus"></i> Add</button>
+            </form>
+        </div>
+        <ul class="category-list">
+            {% for cat in categories %}
+                <li class="category-item" data-id="{{ cat.id }}">
+                    <span class="category-name">{{ cat.name }}</span>
+                    <span class="category-count">({{ category_counts[cat.id] }})</span>
+                    <div class="category-actions">
+                        <button class="edit-category" data-id="{{ cat.id }}" data-name="{{ cat.name }}"><i class="fas fa-edit"></i></button>
+                        <form action="/category/delete/{{ cat.id }}" method="POST" class="delete-category-form" style="display:inline;">
+                            <button type="submit" class="delete-category" onclick="return confirm('Delete category \'{{ cat.name }}\'? Tasks using it will keep their category (become uncategorized).');"><i class="fas fa-trash"></i></button>
+                        </form>
+                    </div>
+                </li>
+            {% endfor %}
+        </ul>
+    </div>
+</aside>
+
+<section class="main-content">
+    <h1>My ToDo List</h1>
+
+    <!-- Flash messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            <div class="flash-messages">
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }}">{{ message }}</div>
+                {% endfor %}
             </div>
-            <div class="categories-content">
-                <ul class="category-list">
-                    {% for cat in categories %}
-                        <li class="category-item" data-id="{{ cat.id }}">
-                            <span class="category-name">{{ cat.name }}</span>
-                            <span class="category-count">({{ category_counts[cat.id] }})</span>
-                            <div class="category-actions">
-                                <button class="edit-category" data-id="{{ cat.id }}" data-name="{{ cat.name }}"><i class="fas fa-edit"></i></button>
-                                <form action="/category/delete/{{ cat.id }}" method="POST" class="delete-category-form" style="display:inline;">
-                                    <button type="submit" class="delete-category" onclick="return confirm('Delete category \'{{ cat.name }}\'? Tasks using it will keep their category (become uncategorized).');"><i class="fas fa-trash"></i></button>
-                                </form>
-                            </div>
-                        </li>
-                    {% endfor %}
-                </ul>
-                <div class="add-category">
-                    <form action="/category/add" method="POST" class="add-category-form">
-                        <input type="text" name="name" placeholder="New category name" required>
-                        <button type="submit"><i class="fas fa-plus"></i> Add</button>
+        {% endif %}
+    {% endwith %}
+
+    <!-- Add task form -->
+    <form action="/add" method="POST" class="todo-form">
+        <input type="text" name="title" placeholder="Enter a new task..." required>
+        <select name="category" class="category-select">
+            <option value="none">No category</option>
+            {% for cat in categories %}
+                <option value="{{ cat.id }}">{{ cat.name }}</option>
+            {% endfor %}
+        </select>
+        <button type="submit">Add</button>
+    </form>
+
+    <!-- Search and filter bar -->
+    <div class="search-filter-bar">
+        <form action="/" method="GET" class="search-form">
+            <input type="text" name="q" placeholder="Search tasks..." value="{{ search_query }}">
+            <select name="cat" onchange="this.form.submit()">
+                <option value="all" {% if selected_category == 'all' %}selected{% endif %}>All categories</option>
+                {% for cat in categories %}
+                    <option value="{{ cat.id }}" {% if selected_category == cat.id|string %}selected{% endif %}>{{ cat.name }}</option>
+                {% endfor %}
+            </select>
+            <button type="submit"><i class="fas fa-search"></i> Search</button>
+            <a href="/" class="clear-filter"><i class="fas fa-times"></i> Clear</a>
+        </form>
+    </div>
+
+    <!-- Incomplete tasks section -->
+    <div class="tasks-section" id="incomplete-section">
+        <div class="section-header">
+            <h2>Tasks to do</h2>
+            <a href="#" class="select-link" data-section="incomplete">Select</a>
+        </div>
+        <div class="batch-actions" id="batch-incomplete" style="display:none;">
+            <button class="batch-btn complete-btn">Mark Complete</button>
+            <button class="batch-btn incomplete-btn">Mark Incomplete</button>
+            <button class="batch-btn delete-btn">Delete</button>
+            <a href="#" class="cancel-select">Cancel</a>
+        </div>
+        <ul class="todo-list" id="incomplete-list">
+            {% for todo in todos if not todo.completed %}
+                <li class="todo-item" data-id="{{ todo.id }}">
+                    <div class="selection-checkbox" style="display:none;">
+                        <input type="checkbox" class="task-select" value="{{ todo.id }}">
+                    </div>
+                    <form action="/complete/{{ todo.id }}" method="POST" class="checkbox-form">
+                        <input type="checkbox" class="task-checkbox" onchange="this.form.submit()">
                     </form>
-                </div>
-            </div>
-        </div>
-
-        <!-- Main content -->
-        <div class="main-content">
-            <h1>My ToDo List</h1>
-
-            <!-- Flash messages -->
-            {% with messages = get_flashed_messages(with_categories=true) %}
-                {% if messages %}
-                    <div class="flash-messages">
-                        {% for category, message in messages %}
-                            <div class="alert alert-{{ category }}">{{ message }}</div>
-                        {% endfor %}
+                    <div class="title-container">
+                        <span class="todo-title">{{ todo.title }}</span>
+                        <div class="edit-container" style="display:none;">
+                            <input type="text" class="edit-title-input" value="{{ todo.title }}">
+                            <select class="edit-category-select">
+                                <option value="none">No category</option>
+                                {% for cat in categories %}
+                                    <option value="{{ cat.id }}" {% if todo.category_id == cat.id %}selected{% endif %}>{{ cat.name }}</option>
+                                {% endfor %}
+                            </select>
+                            <button class="save-edit-btn">Save</button>
+                            <button class="cancel-edit-btn">Cancel</button>
+                        </div>
+                        {% if todo.category %}
+                            <span class="category-badge" style="background-color: {{ todo.category.name|category_color }};">{{ todo.category.name }}</span>
+                        {% else %}
+                            <span class="category-badge no-category">No category</span>
+                        {% endif %}
                     </div>
-                {% endif %}
-            {% endwith %}
+                    <div class="todo-actions">
+                        <button class="btn-edit"><i class="fas fa-edit"></i> Edit</button>
+                        <form action="/delete/{{ todo.id }}" method="POST" class="inline-form">
+                            <button type="submit" class="btn-delete"><i class="fas fa-trash"></i> Delete</button>
+                        </form>
+                    </div>
+                </li>
+            {% else %}
+                <li class="empty">No pending tasks.</li>
+            {% endfor %}
+        </ul>
+    </div>
 
-            <!-- Add task form -->
-            <form action="/add" method="POST" class="todo-form">
-                <input type="text" name="title" placeholder="Enter a new task..." required>
-                <select name="category" class="category-select">
-                    <option value="none">No category</option>
-                    {% for cat in categories %}
-                        <option value="{{ cat.id }}">{{ cat.name }}</option>
-                    {% endfor %}
-                </select>
-                <button type="submit">Add</button>
-            </form>
-
-            <!-- Search and filter bar -->
-            <div class="search-filter-bar">
-                <form action="/" method="GET" class="search-form">
-                    <input type="text" name="q" placeholder="Search tasks..." value="{{ search_query }}">
-                    <select name="cat" onchange="this.form.submit()">
-                        <option value="all" {% if selected_category == 'all' %}selected{% endif %}>All categories</option>
-                        {% for cat in categories %}
-                            <option value="{{ cat.id }}" {% if selected_category == cat.id|string %}selected{% endif %}>{{ cat.name }}</option>
-                        {% endfor %}
-                    </select>
-                    <button type="submit"><i class="fas fa-search"></i> Search</button>
-                    <a href="/" class="clear-filter"><i class="fas fa-times"></i> Clear</a>
-                </form>
+    {% if todos|selectattr('completed')|list %}
+        <hr class="section-divider">
+        <div class="tasks-section" id="completed-section">
+            <div class="section-header">
+                <h2>Completed tasks</h2>
+                <a href="#" class="select-link" data-section="completed">Select</a>
             </div>
-
-            <!-- Incomplete tasks section -->
-            <div class="tasks-section" id="incomplete-section">
-                <div class="section-header">
-                    <h2>Tasks to do</h2>
-                    <a href="#" class="select-link" data-section="incomplete">Select</a>
-                </div>
-                <div class="batch-actions" id="batch-incomplete" style="display:none;">
-                    <button class="batch-btn complete-btn">Mark Complete</button>
-                    <button class="batch-btn incomplete-btn">Mark Incomplete</button>
-                    <button class="batch-btn delete-btn">Delete</button>
-                    <a href="#" class="cancel-select">Cancel</a>
-                </div>
-                <ul class="todo-list" id="incomplete-list">
-                    {% for todo in todos if not todo.completed %}
-                        <li class="todo-item" data-id="{{ todo.id }}">
-                            <div class="selection-checkbox" style="display:none;">
-                                <input type="checkbox" class="task-select" value="{{ todo.id }}">
+            <div class="batch-actions" id="batch-completed" style="display:none;">
+                <button class="batch-btn complete-btn">Mark Complete</button>
+                <button class="batch-btn incomplete-btn">Mark Incomplete</button>
+                <button class="batch-btn delete-btn">Delete</button>
+                <a href="#" class="cancel-select">Cancel</a>
+            </div>
+            <ul class="todo-list completed-list" id="completed-list">
+                {% for todo in todos if todo.completed %}
+                    <li class="todo-item" data-id="{{ todo.id }}">
+                        <div class="selection-checkbox" style="display:none;">
+                            <input type="checkbox" class="task-select" value="{{ todo.id }}">
+                        </div>
+                        <form action="/complete/{{ todo.id }}" method="POST" class="checkbox-form">
+                            <input type="checkbox" class="task-checkbox" checked onchange="this.form.submit()">
+                        </form>
+                        <div class="title-container">
+                            <span class="todo-title completed">{{ todo.title }}</span>
+                            <div class="edit-container" style="display:none;">
+                                <input type="text" class="edit-title-input" value="{{ todo.title }}">
+                                <select class="edit-category-select">
+                                    <option value="none">No category</option>
+                                    {% for cat in categories %}
+                                        <option value="{{ cat.id }}" {% if todo.category_id == cat.id %}selected{% endif %}>{{ cat.name }}</option>
+                                    {% endfor %}
+                                </select>
+                                <button class="save-edit-btn">Save</button>
+                                <button class="cancel-edit-btn">Cancel</button>
                             </div>
-                            <form action="/complete/{{ todo.id }}" method="POST" class="checkbox-form">
-                                <input type="checkbox" class="task-checkbox" onchange="this.form.submit()">
+                            {% if todo.category %}
+                                <span class="category-badge" style="background-color: {{ todo.category.name|category_color }};">{{ todo.category.name }}</span>
+                            {% else %}
+                                <span class="category-badge no-category">No category</span>
+                            {% endif %}
+                        </div>
+                        <div class="todo-actions">
+                            <button class="btn-edit"><i class="fas fa-edit"></i> Edit</button>
+                            <form action="/delete/{{ todo.id }}" method="POST" class="inline-form">
+                                <button type="submit" class="btn-delete"><i class="fas fa-trash"></i> Delete</button>
                             </form>
-                            <div class="title-container">
-                                <span class="todo-title">{{ todo.title }}</span>
-                                <div class="edit-container" style="display:none;">
-                                    <input type="text" class="edit-title-input" value="{{ todo.title }}">
-                                    <select class="edit-category-select">
-                                        <option value="none">No category</option>
-                                        {% for cat in categories %}
-                                            <option value="{{ cat.id }}" {% if todo.category_id == cat.id %}selected{% endif %}>{{ cat.name }}</option>
-                                        {% endfor %}
-                                    </select>
-                                    <button class="save-edit-btn">Save</button>
-                                    <button class="cancel-edit-btn">Cancel</button>
-                                </div>
-                                {% if todo.category %}
-                                    <span class="category-badge" style="background-color: {{ todo.category.name|category_color }};">{{ todo.category.name }}</span>
-                                {% else %}
-                                    <span class="category-badge no-category">No category</span>
-                                {% endif %}
-                            </div>
-                            <div class="todo-actions">
-                                <button class="btn-edit"><i class="fas fa-edit"></i> Edit</button>
-                                <form action="/delete/{{ todo.id }}" method="POST" class="inline-form">
-                                    <button type="submit" class="btn-delete"><i class="fas fa-trash"></i> Delete</button>
-                                </form>
-                            </div>
-                        </li>
-                    {% else %}
-                        <li class="empty">No pending tasks.</li>
-                    {% endfor %}
-                </ul>
-            </div>
-
-            {% if todos|selectattr('completed')|list %}
-                <hr class="section-divider">
-                <div class="tasks-section" id="completed-section">
-                    <div class="section-header">
-                        <h2>Completed tasks</h2>
-                        <a href="#" class="select-link" data-section="completed">Select</a>
-                    </div>
-                    <div class="batch-actions" id="batch-completed" style="display:none;">
-                        <button class="batch-btn complete-btn">Mark Complete</button>
-                        <button class="batch-btn incomplete-btn">Mark Incomplete</button>
-                        <button class="batch-btn delete-btn">Delete</button>
-                        <a href="#" class="cancel-select">Cancel</a>
-                    </div>
-                    <ul class="todo-list completed-list" id="completed-list">
-                        {% for todo in todos if todo.completed %}
-                            <li class="todo-item" data-id="{{ todo.id }}">
-                                <div class="selection-checkbox" style="display:none;">
-                                    <input type="checkbox" class="task-select" value="{{ todo.id }}">
-                                </div>
-                                <form action="/complete/{{ todo.id }}" method="POST" class="checkbox-form">
-                                    <input type="checkbox" class="task-checkbox" checked onchange="this.form.submit()">
-                                </form>
-                                <div class="title-container">
-                                    <span class="todo-title completed">{{ todo.title }}</span>
-                                    <div class="edit-container" style="display:none;">
-                                        <input type="text" class="edit-title-input" value="{{ todo.title }}">
-                                        <select class="edit-category-select">
-                                            <option value="none">No category</option>
-                                            {% for cat in categories %}
-                                                <option value="{{ cat.id }}" {% if todo.category_id == cat.id %}selected{% endif %}>{{ cat.name }}</option>
-                                            {% endfor %}
-                                        </select>
-                                        <button class="save-edit-btn">Save</button>
-                                        <button class="cancel-edit-btn">Cancel</button>
-                                    </div>
-                                    {% if todo.category %}
-                                        <span class="category-badge" style="background-color: {{ todo.category.name|category_color }};">{{ todo.category.name }}</span>
-                                    {% else %}
-                                        <span class="category-badge no-category">No category</span>
-                                    {% endif %}
-                                </div>
-                                <div class="todo-actions">
-                                    <button class="btn-edit"><i class="fas fa-edit"></i> Edit</button>
-                                    <form action="/delete/{{ todo.id }}" method="POST" class="inline-form">
-                                        <button type="submit" class="btn-delete"><i class="fas fa-trash"></i> Delete</button>
-                                    </form>
-                                </div>
-                            </li>
-                        {% endfor %}
-                    </ul>
-                </div>
-            {% endif %}
+                        </div>
+                    </li>
+                {% endfor %}
+            </ul>
         </div>
-    </div>
-
-    <!-- Modal for editing category (inline edit alternative) -->
-    <div id="editCategoryModal" class="modal">
-        <div class="modal-content">
-            <span class="close">&times;</span>
-            <h3>Edit Category</h3>
-            <form id="editCategoryForm" method="POST">
-                <input type="text" name="name" id="editCategoryName" required>
-                <button type="submit">Save</button>
-            </form>
-        </div>
-    </div>
-
-    <script>
-        // Sidebar toggle
-        const sidebar = document.querySelector('.categories-sidebar');
-        const toggleBtn = document.getElementById('toggleSidebar');
-        toggleBtn.addEventListener('click', () => {
-            sidebar.classList.toggle('collapsed');
-            if (sidebar.classList.contains('collapsed')) {
-                toggleBtn.innerHTML = '<i class="fas fa-chevron-right"></i>';
-            } else {
-                toggleBtn.innerHTML = '<i class="fas fa-chevron-left"></i>';
-            }
-        });
-
-        // Category edit modal
-        const modal = document.getElementById('editCategoryModal');
-        const modalForm = document.getElementById('editCategoryForm');
-        const categoryNameInput = document.getElementById('editCategoryName');
-        const closeModal = document.querySelector('.close');
-
-        document.querySelectorAll('.edit-category').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                e.preventDefault();
-                const catId = btn.dataset.id;
-                const catName = btn.dataset.name;
-                categoryNameInput.value = catName;
-                modalForm.action = `/category/edit/${catId}`;
-                modal.style.display = 'block';
-            });
-        });
-
-        closeModal.onclick = () => modal.style.display = 'none';
-        window.onclick = (event) => {
-            if (event.target == modal) modal.style.display = 'none';
-        };
-
-        // Helper to get current filter parameters
-        function getFilterParams() {
-            const urlParams = new URLSearchParams(window.location.search);
-            return { q: urlParams.get('q') || '', cat: urlParams.get('cat') || 'all' };
-        }
-
-        // Batch selection mode (same as before)
-        let activeSection = null;
-        function toggleSelectionMode(section) {
-            if (activeSection === section) { exitSelectionMode(); return; }
-            if (activeSection) exitSelectionMode();
-            activeSection = section;
-            const sectionDiv = document.getElementById(`${section}-section`);
-            const sectionList = document.getElementById(`${section}-list`);
-            const batchActions = document.getElementById(`batch-${section}`);
-            const selectLink = sectionDiv.querySelector('.select-link');
-            sectionList.querySelectorAll('.selection-checkbox').forEach(cb => cb.style.display = 'block');
-            sectionList.querySelectorAll('.checkbox-form').forEach(form => form.style.display = 'none');
-            sectionList.querySelectorAll('.todo-actions').forEach(actions => actions.style.display = 'none');
-            selectLink.style.display = 'none';
-            batchActions.style.display = 'flex';
-            attachBatchListeners(section);
-        }
-        function exitSelectionMode() {
-            if (!activeSection) return;
-            const sectionList = document.getElementById(`${activeSection}-list`);
-            const batchActions = document.getElementById(`batch-${activeSection}`);
-            const selectLink = document.querySelector(`#${activeSection}-section .select-link`);
-            sectionList.querySelectorAll('.selection-checkbox').forEach(cb => cb.style.display = 'none');
-            sectionList.querySelectorAll('.checkbox-form').forEach(form => form.style.display = 'flex');
-            sectionList.querySelectorAll('.todo-actions').forEach(actions => actions.style.display = 'flex');
-            selectLink.style.display = 'inline';
-            batchActions.style.display = 'none';
-            sectionList.querySelectorAll('.task-select').forEach(cb => cb.checked = false);
-            activeSection = null;
-        }
-        function getSelectedTaskIds(section) {
-            const sectionList = document.getElementById(`${section}-list`);
-            const checkboxes = sectionList.querySelectorAll('.task-select:checked');
-            return Array.from(checkboxes).map(cb => cb.value);
-        }
-        function attachBatchListeners(section) {
-            const batchActions = document.getElementById(`batch-${section}`);
-            const completeBtn = batchActions.querySelector('.complete-btn');
-            const incompleteBtn = batchActions.querySelector('.incomplete-btn');
-            const deleteBtn = batchActions.querySelector('.delete-btn');
-            const cancelLink = batchActions.querySelector('.cancel-select');
-            const newComplete = completeBtn.cloneNode(true);
-            completeBtn.parentNode.replaceChild(newComplete, completeBtn);
-            const newIncomplete = incompleteBtn.cloneNode(true);
-            incompleteBtn.parentNode.replaceChild(newIncomplete, incompleteBtn);
-            const newDelete = deleteBtn.cloneNode(true);
-            deleteBtn.parentNode.replaceChild(newDelete, deleteBtn);
-            const newCancel = cancelLink.cloneNode(true);
-            cancelLink.parentNode.replaceChild(newCancel, cancelLink);
-            newComplete.addEventListener('click', (e) => {
-                e.preventDefault();
-                const ids = getSelectedTaskIds(section);
-                if (ids.length === 0) return alert('No tasks selected');
-                sendBatchAction('complete', ids);
-            });
-            newIncomplete.addEventListener('click', (e) => {
-                e.preventDefault();
-                const ids = getSelectedTaskIds(section);
-                if (ids.length === 0) return alert('No tasks selected');
-                sendBatchAction('incomplete', ids);
-            });
-            newDelete.addEventListener('click', (e) => {
-                e.preventDefault();
-                const ids = getSelectedTaskIds(section);
-                if (ids.length === 0) return alert('No tasks selected');
-                if (confirm(`Delete ${ids.length} task(s)?`)) sendBatchAction('delete', ids);
-            });
-            newCancel.addEventListener('click', (e) => {
-                e.preventDefault();
-                exitSelectionMode();
-            });
-        }
-        function sendBatchAction(action, taskIds) {
-            let endpoint = '';
-            if (action === 'complete') endpoint = '/batch/complete';
-            else if (action === 'incomplete') endpoint = '/batch/incomplete';
-            else if (action === 'delete') endpoint = '/batch/delete';
-            else return;
-            const params = getFilterParams();
-            const formData = new URLSearchParams();
-            taskIds.forEach(id => formData.append('task_ids', id));
-            formData.append('q', params.q);
-            formData.append('cat', params.cat);
-            fetch(endpoint, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                body: formData
-            })
-            .then(response => {
-                if (!response.ok) throw new Error('Batch operation failed');
-                window.location.href = `/?q=${encodeURIComponent(params.q)}&cat=${params.cat}`;
-            })
-            .catch(err => alert('Failed to perform batch operation.'));
-        }
-
-        // Inline edit logic
-        document.querySelectorAll('.btn-edit').forEach(button => {
-            button.addEventListener('click', function() {
-                const li = this.closest('.todo-item');
-                const titleSpan = li.querySelector('.todo-title');
-                const categoryBadge = li.querySelector('.category-badge');
-                const editContainer = li.querySelector('.edit-container');
-                const titleInput = editContainer.querySelector('.edit-title-input');
-                const categorySelect = editContainer.querySelector('.edit-category-select');
-                titleSpan.style.display = 'none';
-                if (categoryBadge) categoryBadge.style.display = 'none';
-                editContainer.style.display = 'flex';
-                titleInput.focus();
-                titleInput.select();
-            });
-        });
-        document.querySelectorAll('.save-edit-btn').forEach(btn => {
-            btn.addEventListener('click', function() {
-                const li = this.closest('.todo-item');
-                const taskId = li.dataset.id;
-                const titleInput = li.querySelector('.edit-title-input');
-                const categorySelect = li.querySelector('.edit-category-select');
-                const newTitle = titleInput.value.trim();
-                const newCategory = categorySelect.value;
-                if (!newTitle) return;
-                const params = getFilterParams();
-                const formData = new URLSearchParams();
-                formData.append('title', newTitle);
-                formData.append('category', newCategory);
-                formData.append('q', params.q);
-                formData.append('cat', params.cat);
-                fetch(`/edit/${taskId}`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                    body: formData
-                })
-                .then(response => {
-                    if (!response.ok) throw new Error('Update failed');
-                    window.location.href = `/?q=${encodeURIComponent(params.q)}&cat=${params.cat}`;
-                })
-                .catch(err => alert('Failed to update task.'));
-            });
-        });
-        document.querySelectorAll('.cancel-edit-btn').forEach(btn => {
-            btn.addEventListener('click', function() {
-                const li = this.closest('.todo-item');
-                const titleSpan = li.querySelector('.todo-title');
-                const categoryBadge = li.querySelector('.category-badge');
-                const editContainer = li.querySelector('.edit-container');
-                titleSpan.style.display = 'block';
-                if (categoryBadge) categoryBadge.style.display = 'inline-block';
-                editContainer.style.display = 'none';
-            });
-        });
-
-        // Select link click handlers
-        document.querySelectorAll('.select-link').forEach(link => {
-            link.addEventListener('click', (e) => {
-                e.preventDefault();
-                toggleSelectionMode(link.dataset.section);
-            });
-        });
-    </script>
-</body>
-</html>
+    {% endif %}
+</section>
+{% endblock %}

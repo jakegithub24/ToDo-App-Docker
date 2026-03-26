@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ToDo App</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <header class="app-header">
+        <div class="header-content">
+            <h1>ToDo App</h1>
+            <p>Clean, intuitive task management in Dockerized Flask.</p>
+        </div>
+    </header>
+
+    <main class="app-main">
+        {% block content %}{% endblock %}
+    </main>
+
+    <footer class="app-footer">
+        <div class="footer-content">
+            <span>Made with Flask + SQLite</span>
+            <a href="https://github.com/your-username/ToDo-App-Docker" target="_blank" rel="noopener noreferrer">
+                <i class="fab fa-github"></i>
+                View on GitHub
+            </a>
+        </div>
+    </footer>
+
+    <!-- Modal for editing category -->
+    <div id="editCategoryModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h3>Edit Category</h3>
+            <form id="editCategoryForm" method="POST">
+                <input type="text" name="name" id="editCategoryName" required>
+                <button type="submit">Save</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // Sidebar toggle - hide whole content when collapsed
+        const sidebar = document.querySelector('.categories-sidebar');
+        const toggleBtn = document.getElementById('toggleSidebar');
+        if (toggleBtn) {
+            toggleBtn.addEventListener('click', () => {
+                sidebar.classList.toggle('collapsed');
+                if (sidebar.classList.contains('collapsed')) {
+                    toggleBtn.innerHTML = '<i class="fas fa-chevron-right"></i>';
+                } else {
+                    toggleBtn.innerHTML = '<i class="fas fa-chevron-left"></i>';
+                }
+            });
+        }
+
+        // Category edit modal
+        const modal = document.getElementById('editCategoryModal');
+        const modalForm = document.getElementById('editCategoryForm');
+        const categoryNameInput = document.getElementById('editCategoryName');
+        const closeModal = document.querySelector('.close');
+
+        document.querySelectorAll('.edit-category').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.preventDefault();
+                const catId = btn.dataset.id;
+                const catName = btn.dataset.name;
+                categoryNameInput.value = catName;
+                modalForm.action = `/category/edit/${catId}`;
+                modal.style.display = 'block';
+            });
+        });
+
+        if(closeModal) {
+            closeModal.onclick = () => modal.style.display = 'none';
+        }
+        window.onclick = (event) => {
+            if (event.target == modal) modal.style.display = 'none';
+        };
+
+        // Helper to get current filter parameters
+        function getFilterParams() {
+            const urlParams = new URLSearchParams(window.location.search);
+            return { q: urlParams.get('q') || '', cat: urlParams.get('cat') || 'all' };
+        }
+
+        // Batch selection mode (unchanged)
+        let activeSection = null;
+        function toggleSelectionMode(section) {
+            if (activeSection === section) { exitSelectionMode(); return; }
+            if (activeSection) exitSelectionMode();
+            activeSection = section;
+            const sectionDiv = document.getElementById(`${section}-section`);
+            const sectionList = document.getElementById(`${section}-list`);
+            const batchActions = document.getElementById(`batch-${section}`);
+            const selectLink = sectionDiv.querySelector('.select-link');
+            sectionList.querySelectorAll('.selection-checkbox').forEach(cb => cb.style.display = 'block');
+            sectionList.querySelectorAll('.checkbox-form').forEach(form => form.style.display = 'none');
+            sectionList.querySelectorAll('.todo-actions').forEach(actions => actions.style.display = 'none');
+            selectLink.style.display = 'none';
+            batchActions.style.display = 'flex';
+            attachBatchListeners(section);
+        }
+        function exitSelectionMode() {
+            if (!activeSection) return;
+            const sectionList = document.getElementById(`${activeSection}-list`);
+            const batchActions = document.getElementById(`batch-${activeSection}`);
+            const selectLink = document.querySelector(`#${activeSection}-section .select-link`);
+            sectionList.querySelectorAll('.selection-checkbox').forEach(cb => cb.style.display = 'none');
+            sectionList.querySelectorAll('.checkbox-form').forEach(form => form.style.display = 'flex');
+            sectionList.querySelectorAll('.todo-actions').forEach(actions => actions.style.display = 'flex');
+            selectLink.style.display = 'inline';
+            batchActions.style.display = 'none';
+            sectionList.querySelectorAll('.task-select').forEach(cb => cb.checked = false);
+            activeSection = null;
+        }
+        function getSelectedTaskIds(section) {
+            const sectionList = document.getElementById(`${section}-list`);
+            const checkboxes = sectionList.querySelectorAll('.task-select:checked');
+            return Array.from(checkboxes).map(cb => cb.value);
+        }
+        function attachBatchListeners(section) {
+            const batchActions = document.getElementById(`batch-${section}`);
+            const completeBtn = batchActions.querySelector('.complete-btn');
+            const incompleteBtn = batchActions.querySelector('.incomplete-btn');
+            const deleteBtn = batchActions.querySelector('.delete-btn');
+            const cancelLink = batchActions.querySelector('.cancel-select');
+            const newComplete = completeBtn.cloneNode(true);
+            completeBtn.parentNode.replaceChild(newComplete, completeBtn);
+            const newIncomplete = incompleteBtn.cloneNode(true);
+            incompleteBtn.parentNode.replaceChild(newIncomplete, incompleteBtn);
+            const newDelete = deleteBtn.cloneNode(true);
+            deleteBtn.parentNode.replaceChild(newDelete, deleteBtn);
+            const newCancel = cancelLink.cloneNode(true);
+            cancelLink.parentNode.replaceChild(newCancel, cancelLink);
+            newComplete.addEventListener('click', (e) => {
+                e.preventDefault();
+                const ids = getSelectedTaskIds(section);
+                if (ids.length === 0) return alert('No tasks selected');
+                sendBatchAction('complete', ids);
+            });
+            newIncomplete.addEventListener('click', (e) => {
+                e.preventDefault();
+                const ids = getSelectedTaskIds(section);
+                if (ids.length === 0) return alert('No tasks selected');
+                sendBatchAction('incomplete', ids);
+            });
+            newDelete.addEventListener('click', (e) => {
+                e.preventDefault();
+                const ids = getSelectedTaskIds(section);
+                if (ids.length === 0) return alert('No tasks selected');
+                if (confirm(`Delete ${ids.length} task(s)?`)) sendBatchAction('delete', ids);
+            });
+            newCancel.addEventListener('click', (e) => {
+                e.preventDefault();
+                exitSelectionMode();
+            });
+        }
+        function sendBatchAction(action, taskIds) {
+            let endpoint = '';
+            if (action === 'complete') endpoint = '/batch/complete';
+            else if (action === 'incomplete') endpoint = '/batch/incomplete';
+            else if (action === 'delete') endpoint = '/batch/delete';
+            else return;
+            const params = getFilterParams();
+            const formData = new URLSearchParams();
+            taskIds.forEach(id => formData.append('task_ids', id));
+            formData.append('q', params.q);
+            formData.append('cat', params.cat);
+            fetch(endpoint, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: formData
+            })
+            .then(response => {
+                if (!response.ok) throw new Error('Batch operation failed');
+                window.location.href = `/?q=${encodeURIComponent(params.q)}&cat=${params.cat}`;
+            })
+            .catch(err => alert('Failed to perform batch operation.'));
+        }
+
+        // Inline edit logic: hide todo-actions when editing, show again after save/cancel
+        document.querySelectorAll('.btn-edit').forEach(button => {
+            button.addEventListener('click', function() {
+                const li = this.closest('.todo-item');
+                const titleSpan = li.querySelector('.todo-title');
+                const categoryBadge = li.querySelector('.category-badge');
+                const editContainer = li.querySelector('.edit-container');
+                const todoActions = li.querySelector('.todo-actions');
+                const titleInput = editContainer.querySelector('.edit-title-input');
+                const categorySelect = editContainer.querySelector('.edit-category-select');
+                // Hide title and badge, show edit container
+                titleSpan.style.display = 'none';
+                if (categoryBadge) categoryBadge.style.display = 'none';
+                editContainer.style.display = 'flex';
+                // Hide todo-actions
+                todoActions.style.display = 'none';
+                titleInput.focus();
+                titleInput.select();
+            });
+        });
+        document.querySelectorAll('.save-edit-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const li = this.closest('.todo-item');
+                const taskId = li.dataset.id;
+                const titleInput = li.querySelector('.edit-title-input');
+                const categorySelect = li.querySelector('.edit-category-select');
+                const newTitle = titleInput.value.trim();
+                const newCategory = categorySelect.value;
+                if (!newTitle) return;
+                const params = getFilterParams();
+                const formData = new URLSearchParams();
+                formData.append('title', newTitle);
+                formData.append('category', newCategory);
+                formData.append('q', params.q);
+                formData.append('cat', params.cat);
+                fetch(`/edit/${taskId}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: formData
+                })
+                .then(response => {
+                    if (!response.ok) throw new Error('Update failed');
+                    window.location.href = `/?q=${encodeURIComponent(params.q)}&cat=${params.cat}`;
+                })
+                .catch(err => alert('Failed to update task.'));
+            });
+        });
+        document.querySelectorAll('.cancel-edit-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const li = this.closest('.todo-item');
+                const titleSpan = li.querySelector('.todo-title');
+                const categoryBadge = li.querySelector('.category-badge');
+                const editContainer = li.querySelector('.edit-container');
+                const todoActions = li.querySelector('.todo-actions');
+                // Restore title and badge, hide edit container
+                titleSpan.style.display = 'block';
+                if (categoryBadge) categoryBadge.style.display = 'inline-block';
+                editContainer.style.display = 'none';
+                // Show todo-actions again
+                todoActions.style.display = 'flex';
+            });
+        });
+
+        // Select link click handlers
+        document.querySelectorAll('.select-link').forEach(link => {
+            link.addEventListener('click', (e) => {
+                e.preventDefault();
+                toggleSelectionMode(link.dataset.section);
+            });
+        });
+    </script>
+</body>
+</html>
