@@ -1,6 +1,6 @@
 from flask import Flask, request, jsonify, render_template, redirect, url_for, flash
 from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy import text
+from sqlalchemy import text, func
 import os
 
 app = Flask(__name__)
@@ -32,9 +32,7 @@ class Todo(db.Model):
         }
 
 def migrate_database():
-    """Ensure the todo table has a category_id column and default categories exist."""
     with app.app_context():
-        # Check if column exists
         result = db.session.execute(text("PRAGMA table_info(todo);"))
         columns = [row[1] for row in result]
         if 'category_id' not in columns:
@@ -44,27 +42,23 @@ def migrate_database():
         else:
             print("category_id column already exists.")
 
-        # Create default categories
         default_categories = ['Work', 'Personal', 'Shopping', 'Other']
         for cat_name in default_categories:
             if not Category.query.filter_by(name=cat_name).first():
                 db.session.add(Category(name=cat_name))
         db.session.commit()
 
-# Run migration once at startup
 migrate_database()
 
-# --- Jinja filter to return a color for a category name ---
 @app.template_filter('category_color')
 def category_color(category_name):
-    """Return a consistent background color for a category name."""
     colors = {
         'Work': '#007bff',
         'Personal': '#28a745',
         'Shopping': '#ffc107',
         'Other': '#6c757d'
     }
-    return colors.get(category_name, '#6c757d')  # default gray
+    return colors.get(category_name, '#6c757d')
 
 # --- Category management routes ---
 @app.route('/categories')
@@ -86,10 +80,24 @@ def add_category():
         flash('Category name cannot be empty.', 'danger')
     return redirect(url_for('index'))
 
+@app.route('/category/edit/<int:cat_id>', methods=['POST'])
+def edit_category(cat_id):
+    category = Category.query.get_or_404(cat_id)
+    new_name = request.form.get('name', '').strip()
+    if new_name and new_name != category.name:
+        if Category.query.filter_by(name=new_name).first():
+            flash('Category name already exists!', 'danger')
+        else:
+            category.name = new_name
+            db.session.commit()
+            flash(f'Category renamed to "{new_name}".', 'success')
+    elif not new_name:
+        flash('Category name cannot be empty.', 'danger')
+    return redirect(url_for('index'))
+
 @app.route('/category/delete/<int:cat_id>', methods=['POST'])
 def delete_category(cat_id):
     category = Category.query.get_or_404(cat_id)
-    # Check if any tasks use this category
     if Todo.query.filter_by(category_id=cat_id).first():
         flash(f'Cannot delete "{category.name}" because tasks are using it.', 'danger')
     else:
@@ -113,8 +121,18 @@ def index():
     todos = query.order_by(Todo.id.desc()).all()
     categories = Category.query.order_by(Category.name).all()
 
+    # Compute task counts per category
+    # Using subquery or raw SQL to get count per category
+    # We'll do it via SQLAlchemy: get all categories and count tasks
+    category_counts = {}
+    for cat in categories:
+        # Count total tasks in this category (both completed and incomplete)
+        count = Todo.query.filter_by(category_id=cat.id).count()
+        category_counts[cat.id] = count
+
     return render_template('index.html', todos=todos, categories=categories,
-                           search_query=search_query, selected_category=category_id)
+                           search_query=search_query, selected_category=category_id,
+                           category_counts=category_counts)
 
 @app.route('/add', methods=['POST'])
 def add_todo_form():
@@ -156,7 +174,7 @@ def delete_todo(todo_id):
     db.session.commit()
     return redirect(url_for('index', q=request.args.get('q', ''), cat=request.args.get('cat', 'all')))
 
-# Batch endpoints
+# Batch endpoints (unchanged)
 @app.route('/batch/complete', methods=['POST'])
 def batch_complete():
     task_ids = request.form.getlist('task_ids')
@@ -181,7 +199,7 @@ def batch_delete():
         db.session.commit()
     return redirect(url_for('index', q=request.args.get('q', ''), cat=request.args.get('cat', 'all')))
 
-# --- JSON API routes ---
+# --- JSON API routes (optional) ---
 @app.route('/todos', methods=['GET'])
 def get_todos():
     todos = Todo.query.all()
